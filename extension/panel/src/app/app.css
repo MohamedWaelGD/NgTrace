@@ -3,8 +3,8 @@
   grid-template-rows: auto auto auto 1fr auto;
   height: 100vh;
 }
-/* Fixed rows: without the optional notice, main would otherwise land in an auto row. */
-.notice {
+/* Fixed rows: without the optional strips, main would otherwise land in an auto row. */
+.extras {
   grid-row: 3;
 }
 main {
@@ -97,6 +97,14 @@ main {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+}
+.table-pane {
+  display: flex;
+  flex-direction: column;
+}
+.table-pane > :last-child {
+  flex: 1;
+  min-height: 0;
 }
 .splitter {
   width: 4px;

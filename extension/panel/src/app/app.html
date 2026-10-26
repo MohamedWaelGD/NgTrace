@@ -89,39 +89,42 @@
   }
 </div>
 
-@if (store.showMocks()) {
-  <app-mocks-pane data-testid="mocks-pane" />
-}
+<!-- One grid row for every optional strip, however many are open. -->
+<div class="extras">
+  @if (store.showMocks()) {
+    <app-mocks-pane data-testid="mocks-pane" />
+  }
 
-@if (store.showWasteSummary()) {
-  <div class="waste-summary" data-testid="waste-summary">
-    @for (w of store.wasteSummary(); track w.group) {
-      <div class="waste-row" data-testid="waste-row">
-        <span class="mono">{{ w.group }}</span>
-        <span>{{ w.duplicates }} duplicate · {{ w.cancelled }} cancelled · {{ w.wastedMs }} ms</span>
-      </div>
-    } @empty {
-      <div class="waste-row">No wasteful requests detected.</div>
-    }
-  </div>
-}
+  @if (store.showWasteSummary()) {
+    <div class="waste-summary" data-testid="waste-summary">
+      @for (w of store.wasteSummary(); track w.group) {
+        <div class="waste-row" data-testid="waste-row">
+          <span class="mono">{{ w.group }}</span>
+          <span>{{ w.duplicates }} duplicate · {{ w.cancelled }} cancelled · {{ w.wastedMs }} ms</span>
+        </div>
+      } @empty {
+        <div class="waste-row">No wasteful requests detected.</div>
+      }
+    </div>
+  }
 
-@if (store.showFailureSummary()) {
-  <div class="waste-summary" data-testid="failures-summary">
-    @for (f of store.failureSummary(); track f.group) {
-      <div class="waste-row" data-testid="failure-row">
-        <span class="mono">{{ f.group }}{{ f.kind === 'service' ? ' (service)' : '' }}</span>
-        <span>{{ f.failed }} failed · {{ f.retries }} {{ f.retries === 1 ? 'retry' : 'retries' }} · {{ f.recovered }} recovered</span>
-      </div>
-    } @empty {
-      <div class="waste-row">No failed requests.</div>
-    }
-  </div>
-}
+  @if (store.showFailureSummary()) {
+    <div class="waste-summary" data-testid="failures-summary">
+      @for (f of store.failureSummary(); track f.group) {
+        <div class="waste-row" data-testid="failure-row">
+          <span class="mono">{{ f.group }}{{ f.kind === 'service' ? ' (service)' : '' }}</span>
+          <span>{{ f.failed }} failed · {{ f.retries }} {{ f.retries === 1 ? 'retry' : 'retries' }} · {{ f.recovered }} recovered</span>
+        </div>
+      } @empty {
+        <div class="waste-row">No failed requests.</div>
+      }
+    </div>
+  }
 
-@if (statusMessage(); as message) {
-  <div class="notice" data-testid="notice">{{ message }}</div>
-}
+  @if (statusMessage(); as message) {
+    <div class="notice" data-testid="notice">{{ message }}</div>
+  }
+</div>
 
 <main #main [style.grid-template-columns]="columns()">
   <aside class="tree-pane">
@@ -135,6 +138,7 @@
     data-testid="splitter-tree"
   ></div>
   <section class="table-pane">
+    <app-overview-strip data-testid="overview" />
     @if (store.viewMode() === 'timeline') {
       <app-request-timeline />
     } @else {
