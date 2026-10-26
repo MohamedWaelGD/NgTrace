@@ -172,6 +172,8 @@ export interface ComponentDetails {
 /** Live Values update (ADR 5): only the lists that changed since the last read are present. */
 export interface LiveUpdate {
   target: ValueTarget;
+  /** When the values were read, on the monotonic clock of `startMono` (for Value History). */
+  at?: number;
   /** Component @Inputs; absent when unchanged or for a service target. */
   inputs?: InputValue[];
   /** Expanded value lists that changed, including the root (path []). */

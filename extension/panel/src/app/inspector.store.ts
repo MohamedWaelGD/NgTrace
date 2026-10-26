@@ -10,7 +10,9 @@ import {
   REVEAL_GLOBAL,
   detectWaste,
   groupReplays,
+  historyKey,
   isFailed,
+  ValueHistory,
   retryChains,
   summariseFailures,
   matchRule,
@@ -156,6 +158,80 @@ export class InspectorStore {
     },
     { equal: (a, b) => a?.kind === b?.kind && a?.id === b?.id },
   );
+
+  // Value History: kept from the Live Values updates of the target, frozen while Recording is paused.
+  private history: ValueHistory | null = null;
+  /** Bumped whenever the history changes (it is a mutable buffer). */
+  private readonly historyVersion = signal(0);
+  /** Snapshot being viewed; null while live. */
+  readonly historyIndex = signal<number | null>(null);
+
+  /** Snapshot times and length of the target's history, for the scrubber. */
+  readonly historyTimes = computed(() => {
+    this.historyVersion();
+    return this.history?.times() ?? [];
+  });
+
+  /** The snapshot being viewed, or null while live. */
+  readonly historySnapshot = computed(() => {
+    this.historyVersion();
+    const index = this.historyIndex();
+    return index === null || !this.history ? null : (this.history.at(index) ?? null);
+  });
+
+  /** Captured Requests of the target (owned by the component, or sent by the service), as scrubber markers. */
+  readonly historyMarkers = computed(() => {
+    const target = this.liveTarget();
+    if (!target) return [];
+    const service = this.selectedService();
+    return this.currentPageRequests().filter(
+      (r) =>
+        r.startMono !== undefined &&
+        (target.kind === 'component' ? r.attribution.instanceId === target.id : r.attribution.service === service?.name),
+    );
+  });
+
+  /** Component details as shown: the viewed snapshot's values while scrubbing. */
+  readonly viewDetails = computed(() => {
+    const details = this.details();
+    const snapshot = this.historySnapshot();
+    if (!details || !snapshot) return details;
+    return {
+      ...details,
+      inputs: snapshot.inputs,
+      state: snapshot.lists[historyKey.path([])] ?? details.state,
+      signals: snapshot.signals ?? details.signals,
+    };
+  });
+
+  /** Expanded value lists as shown: the viewed snapshot's lists over the current ones. */
+  readonly viewExpansions = computed<ReadonlyMap<string, ValueEntry[]>>(() => {
+    const snapshot = this.historySnapshot();
+    const target = this.liveTarget();
+    if (!snapshot || !target) return this.expansions();
+    const map = new Map(this.expansions());
+    for (const [key, entries] of Object.entries(snapshot.lists)) {
+      const path = JSON.parse(key.slice(key.indexOf('\u0000') + 1)) as string[];
+      const k = targetKey(target, path);
+      if (map.has(k) || (!path.length && target.kind === 'service')) map.set(k, entries);
+    }
+    return map;
+  });
+
+  /** Rows highlighted as changed: live flashes, or what changed at the viewed step. */
+  readonly viewFlashing = computed<ReadonlySet<string>>(() => {
+    const snapshot = this.historySnapshot();
+    const target = this.liveTarget();
+    if (!snapshot || !target) return this.flashing();
+    return new Set(
+      snapshot.changed.map((key) => {
+        const [kind, rest] = [key.slice(0, key.indexOf('\u0000')), key.slice(key.indexOf('\u0000') + 1)];
+        if (kind === 'input') return `input ${rest}`;
+        if (kind === 'signal') return `signal ${rest}`;
+        return targetKey(target, JSON.parse(rest) as string[]);
+      }),
+    );
+  });
 
   /** Expanded value paths of the Live Values target. */
   private readonly livePaths = computed(
@@ -313,6 +389,11 @@ export class InspectorStore {
 
   constructor() {
     effect(() => this.send({ type: 'live-target', target: this.liveTarget(), paths: this.livePaths() }));
+    // A new Live Values target starts a new Value History from the values shown now.
+    effect(() => {
+      const target = this.liveTarget();
+      untracked(() => this.startHistory(target));
+    });
     effect(() => {
       const origin = originOf(this.pageUrl());
       if (origin) void this.loadMockRules(origin);
@@ -409,9 +490,36 @@ export class InspectorStore {
     }
   }
 
+  private startHistory(target: ValueTarget | null): void {
+    this.historyIndex.set(null);
+    this.history = null;
+    if (target) {
+      const details = this.details();
+      const root = target.kind === 'component' ? (details?.state ?? []) : (this.expansions().get(targetKey(target, [])) ?? []);
+      this.history = new ValueHistory(target, {
+        // The panel's clock: close to the page's monotonic epoch, and only used for the first snapshot.
+        at: performance.timeOrigin + performance.now(),
+        inputs: target.kind === 'component' ? (details?.inputs ?? []) : [],
+        lists: [{ path: [], entries: root }],
+        signals: target.kind === 'component' ? (details?.signals ?? null) : null,
+      });
+    }
+    this.historyVersion.update((v) => v + 1);
+  }
+
+  /** Scrubs the Value History; null goes back to live values. Recording keeps going. */
+  viewHistory(index: number | null): void {
+    const last = (this.history?.length ?? 1) - 1;
+    this.historyIndex.set(index === null || index >= last ? null : Math.max(0, index));
+  }
+
   private applyLive(u: LiveUpdate): void {
     const target = this.liveTarget();
     if (!target || target.kind !== u.target.kind || target.id !== u.target.id) return;
+    if (this.history && !this.paused()) {
+      this.history.apply(u);
+      this.historyVersion.update((v) => v + 1);
+    }
     this.liveThrottled.set(u.throttled);
     const details = this.details();
     if (target.kind === 'component' && details) {
@@ -603,6 +711,10 @@ export class InspectorStore {
 
   selectRequest(r: CapturedRequest | null): void {
     this.selectedRequestId.set(r?.id ?? null);
+    // A request of the Live Values target: show the values just before it was sent.
+    if (r && this.history && r.startMono !== undefined && this.historyMarkers().includes(r)) {
+      this.viewHistory(Math.max(0, this.history.before(r.startMono)));
+    }
     const owner = r?.attribution.instanceId ?? null;
     if (owner !== null && r!.id.startsWith(`${this.pageId()}:`)) {
       this.expandTo(owner);

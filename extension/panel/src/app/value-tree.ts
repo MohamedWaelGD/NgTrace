@@ -37,10 +37,11 @@ export class ValueTree {
   readonly path = input<string[]>([]);
   readonly entries = input.required<ValueEntry[]>();
 
-  private readonly expansions = computed(() => this.store.expansions());
+  /** The viewed Value History snapshot's lists while scrubbing. */
+  private readonly expansions = computed(() => this.store.viewExpansions());
 
   protected flashing(path: string[]): boolean {
-    return this.store.flashing().has(targetKey(this.target(), path));
+    return this.store.viewFlashing().has(targetKey(this.target(), path));
   }
 
   protected isOpen(path: string[]): boolean {

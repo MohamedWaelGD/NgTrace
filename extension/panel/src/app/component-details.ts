@@ -2,6 +2,7 @@ import { Component, computed, ElementRef, inject, signal } from '@angular/core';
 import type { InjectedService, ProviderInfo, SignalNode, ValueTarget } from '@ngapi/protocol';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { ICONS, Twisty } from './icons';
+import { HistoryScrubber } from './history-scrubber';
 import { SourceActions } from './source-actions';
 import { InspectorStore, targetKey } from './inspector.store';
 import { ValueTree } from './value-tree';
@@ -11,7 +12,7 @@ type Section = 'inputs' | 'state' | 'signals' | 'services' | 'injectors';
 /** Selected component: @Inputs, State, injected services and the injector path (read-only). */
 @Component({
   selector: 'app-component-details',
-  imports: [ValueTree, HugeiconsIconComponent, Twisty, SourceActions],
+  imports: [ValueTree, HugeiconsIconComponent, Twisty, SourceActions, HistoryScrubber],
   template: `
     @if (store.selectedService(); as service) {
       <div class="pane-title service-title" data-testid="service-title">
@@ -21,6 +22,7 @@ type Section = 'inputs' | 'state' | 'signals' | 'services' | 'injectors';
         }
         <button class="icon" title="Back to the component" (click)="store.selectService(null)" aria-label="Back"><hugeicons-icon [icon]="icons.close" [size]="14" /></button>
       </div>
+      <app-history-scrubber />
       <div class="section-body">
         @if (serviceTarget(); as target) {
           <app-value-tree [target]="target" [entries]="serviceEntries()" data-testid="service-state" />
@@ -28,7 +30,7 @@ type Section = 'inputs' | 'state' | 'signals' | 'services' | 'injectors';
           <div class="muted">Instance not created yet — showing its requests only.</div>
         }
       </div>
-    } @else if (store.details(); as d) {
+    } @else if (store.viewDetails(); as d) {
       <div class="pane-title">
         <span class="title">
           Details
@@ -42,6 +44,7 @@ type Section = 'inputs' | 'state' | 'signals' | 'services' | 'injectors';
         </span>
         <button class="icon" title="Refresh values" (click)="refresh(d.id)" data-testid="refresh-details" aria-label="Refresh values"><hugeicons-icon [icon]="icons.refresh" [size]="14" /></button>
       </div>
+      <app-history-scrubber />
       <div class="scroll">
         <app-source-actions class="source" [node]="store.selectedNode()" [alwaysShowLocation]="true" />
         @if (d.inputs.length) {
@@ -49,7 +52,7 @@ type Section = 'inputs' | 'state' | 'signals' | 'services' | 'injectors';
           @if (open().has('inputs')) {
             <div class="section-body inputs">
               @for (i of d.inputs; track i.name) {
-                <div class="input-row" [class.flash]="store.flashing().has('input ' + i.name)"><span class="key">{{ i.name }}</span>: <span>{{ i.preview }}</span></div>
+                <div class="input-row" [class.flash]="store.viewFlashing().has('input ' + i.name)"><span class="key">{{ i.name }}</span>: <span>{{ i.preview }}</span></div>
               }
             </div>
           }
@@ -69,7 +72,7 @@ type Section = 'inputs' | 'state' | 'signals' | 'services' | 'injectors';
               @for (s of signals; track s.id) {
                 <div
                   class="signal-row"
-                  [class.flash]="store.flashing().has('signal ' + s.id)"
+                  [class.flash]="store.viewFlashing().has('signal ' + s.id)"
                   [class.target]="scrolledTo() === s.id"
                   [attr.data-signal-id]="s.id"
                   [attr.data-testid]="'signal-' + s.label"
@@ -212,7 +215,7 @@ export class ComponentDetails {
 
   protected readonly serviceEntries = computed(() => {
     const target = this.serviceTarget();
-    return target ? (this.store.expansions().get(targetKey(target, [])) ?? []) : [];
+    return target ? (this.store.viewExpansions().get(targetKey(target, [])) ?? []) : [];
   });
 
   protected componentTarget(id: number): ValueTarget {

@@ -54,7 +54,7 @@ function start(): void {
       isGone: (target) => (target.kind === 'component' ? registry.isDestroyed(target.id) : !inspector.hasService(target.id)),
       signals: (id) => inspector.signals(id),
     },
-    (update) => post({ type: 'live', pageId, update }),
+    (update) => post({ type: 'live', pageId, update: { ...update, at: monoNow() } }),
     (fn, ms) => setTimeoutNative(fn, ms),
   );
   context.onChangeDetection = () => live.changeDetected();
