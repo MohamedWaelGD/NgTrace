@@ -19,6 +19,7 @@ import { installCapture, type Recorder } from './capture';
 import { OwnerContext } from './context';
 import { Inspector } from './inspect';
 import { LiveValues } from './live';
+import { MockEngine } from './mock-engine';
 import { NavLog, navigationEventOf } from './nav-log';
 import { Overlay } from './overlay';
 import { InstanceRegistry } from './registry';
@@ -61,6 +62,32 @@ function start(): void {
     navLog.add(event);
     post({ type: 'navigation', pageId, event });
   };
+
+  const MOCK_HINT_KEY = '__ngapi_mocks';
+  const mocks = new MockEngine({
+    now: () => Date.now(),
+    schedule: (fn, ms) => void setTimeoutNative(fn, ms),
+    // Synchronous memory for the next page load: "rules were armed here", so early requests wait for them.
+    hint: {
+      get: () => {
+        try {
+          return sessionStorage.getItem(MOCK_HINT_KEY) === '1';
+        } catch {
+          return false;
+        }
+      },
+      set: (on) => {
+        try {
+          if (on) sessionStorage.setItem(MOCK_HINT_KEY, '1');
+          else sessionStorage.removeItem(MOCK_HINT_KEY);
+        } catch {
+          // Storage can be unavailable (sandboxed frames): early requests then simply are not held.
+        }
+      },
+    },
+    onGateTimeout: () =>
+      post({ type: 'mock-warning', pageId, message: 'Some requests were sent before the Mock Rules arrived and were not mocked.' }),
+  });
 
   const order: string[] = [];
   const requests = new Map<string, CapturedRequest>();
@@ -143,7 +170,13 @@ function start(): void {
       post({ type: 'request', pageId, request: record });
     },
   };
-  const capture = installCapture(win, recorder);
+  const capture = installCapture(win, recorder, {
+    gate: () => mocks.gate(),
+    match: (id) => {
+      const record = requests.get(id);
+      return record ? mocks.match({ method: record.method, url: record.url, className: record.attribution.className }) : null;
+    },
+  });
 
   const reattribute = () => {
     for (const [id, input] of pending) {
@@ -230,6 +263,12 @@ function start(): void {
         capture.replay(command.spec, original ? { attribution: structuredClone(original.attribution) } : undefined);
         break;
       }
+      case 'mock-rules':
+        mocks.arm(command.rules);
+        break;
+      case 'mock-disarm':
+        mocks.disarm();
+        break;
       case 'pause':
         paused = command.paused;
         live.paused = paused;

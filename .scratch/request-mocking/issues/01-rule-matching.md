@@ -1,6 +1,6 @@
 # Pure rule matching
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: none
 
 ## What
@@ -10,3 +10,4 @@ Blocked by: none
 Unit tests for each matching dimension and for ordering.
 
 ## Comments
+2026-10-26: Implemented (mock.ts, mock-engine.ts, capture.ts fetch+XHR, mocks-pane.ts, e2e/mocking.spec.ts).

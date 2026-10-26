@@ -14,7 +14,11 @@ chrome.runtime.onConnect.addListener((port) => {
     chrome.tabs.sendMessage(tabId, message).catch(() => {});
   });
   port.onDisconnect.addListener(() => {
-    if (panels.get(tabId) === port) panels.delete(tabId);
+    if (panels.get(tabId) !== port) return;
+    panels.delete(tabId);
+    // The panel closed: stop applying Mock Rules at once (the hook also drops them when heartbeats stop).
+    const message: RuntimeMessage = { channel: 'command', tabId, command: { type: 'mock-disarm' } };
+    chrome.tabs.sendMessage(tabId, message).catch(() => {});
   });
 });
 

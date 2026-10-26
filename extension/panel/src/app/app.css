@@ -121,3 +121,5 @@ main {
 
 .waste-summary { padding: 4px 8px; border-bottom: 1px solid var(--border); background: var(--toolbar); }
 .waste-row { display: flex; gap: 12px; justify-content: space-between; padding: 1px 0; }
+
+.chip.armed { border-color: var(--warn); color: var(--warn); }

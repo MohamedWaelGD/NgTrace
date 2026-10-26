@@ -8,3 +8,4 @@ export * from './waste';
 export * from './timeline';
 export * from './diff';
 export * from './replay';
+export * from './mock';

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { CapturedRequest } from '@ngapi/protocol';
+import type { CapturedRequest, MockRule } from '@ngapi/protocol';
 import { installCapture, type Recorder } from './capture';
 
 type Rec = { transport: string; stack: string; data: Partial<CapturedRequest> };
@@ -27,6 +27,135 @@ function fetchTarget(impl: typeof fetch) {
   const XHR = class extends FakeXHR {};
   return { fetch: impl, XMLHttpRequest: XHR as unknown as typeof XMLHttpRequest, location: { href: 'http://localhost:4200/products/1' } };
 }
+
+const mockRule = (overrides: Partial<MockRule> = {}): MockRule => ({
+  id: 'm1',
+  enabled: true,
+  method: '*',
+  pattern: '/api/*',
+  regex: false,
+  component: null,
+  delayMs: 0,
+  action: { kind: 'passthrough' },
+  ...overrides,
+});
+
+/** A mocker that always answers with `rule`; timers are driven by hand through `fire()`. */
+function mocking(rule: MockRule | null, gate: Promise<void> | null = null) {
+  const timers: { ms: number; fn: () => void }[] = [];
+  return {
+    mocker: { gate: () => gate, match: () => rule },
+    setTimeout: ((fn: () => void, ms: number) => void timers.push({ ms, fn })) as unknown as typeof setTimeout,
+    timers,
+    fire: () => timers.splice(0).forEach((t) => t.fn()),
+  };
+}
+
+describe('fetch mocking', () => {
+  it('answers with the canned response without sending the real request, and marks it mocked', async () => {
+    const { rec, last } = recorder();
+    const native = vi.fn(async () => new Response('real'));
+    const m = mocking(
+      mockRule({ action: { kind: 'respond', status: 503, headers: [['content-type', 'application/json']], body: '{"down":true}' } }),
+    );
+    const target = { ...fetchTarget(native as unknown as typeof fetch), setTimeout: m.setTimeout };
+    installCapture(target, rec, m.mocker);
+
+    const res = await target.fetch('/api/items');
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ down: true });
+    await flush();
+
+    expect(native).not.toHaveBeenCalled();
+    expect(last().data).toMatchObject({
+      mocked: true,
+      status: 503,
+      mime: 'application/json',
+      responseBody: { kind: 'json', text: '{"down":true}' },
+    });
+    expect(last().data.endTime).toBeTypeOf('number');
+  });
+
+  it('handles bodiless statuses like 204', async () => {
+    const { rec } = recorder();
+    const m = mocking(mockRule({ action: { kind: 'respond', status: 204, headers: [], body: '' } }));
+    const target = { ...fetchTarget(vi.fn() as unknown as typeof fetch), setTimeout: m.setTimeout };
+    installCapture(target, rec, m.mocker);
+    expect((await target.fetch('/api/items')).status).toBe(204);
+  });
+
+  it('fails like a network error without sending the real request', async () => {
+    const { rec, last } = recorder();
+    const native = vi.fn(async () => new Response('real'));
+    const m = mocking(mockRule({ action: { kind: 'error' } }));
+    const target = { ...fetchTarget(native as unknown as typeof fetch), setTimeout: m.setTimeout };
+    installCapture(target, rec, m.mocker);
+
+    await expect(target.fetch('/api/items')).rejects.toThrow(TypeError);
+    expect(native).not.toHaveBeenCalled();
+    expect(last().data).toMatchObject({ mocked: true, status: null });
+    expect(last().data.error).toContain('Failed to fetch');
+  });
+
+  it('delays the real request when the action is delay', async () => {
+    const { rec } = recorder();
+    const native = vi.fn(async () => new Response('real'));
+    const m = mocking(mockRule({ delayMs: 800, action: { kind: 'delay' } }));
+    const target = { ...fetchTarget(native as unknown as typeof fetch), setTimeout: m.setTimeout };
+    installCapture(target, rec, m.mocker);
+
+    const pending = target.fetch('/api/items');
+    await flush();
+    expect(native).not.toHaveBeenCalled();
+    expect(m.timers.map((t) => t.ms)).toEqual([800]);
+    m.fire();
+    expect(await (await pending).text()).toBe('real');
+    expect(native).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds the rule delay before a canned response too', async () => {
+    const { rec } = recorder();
+    const m = mocking(mockRule({ delayMs: 300, action: { kind: 'respond', status: 200, headers: [], body: 'ok' } }));
+    const target = { ...fetchTarget(vi.fn() as unknown as typeof fetch), setTimeout: m.setTimeout };
+    installCapture(target, rec, m.mocker);
+    const pending = target.fetch('/api/items');
+    await flush();
+    expect(m.timers.map((t) => t.ms)).toEqual([300]);
+    m.fire();
+    expect(await (await pending).text()).toBe('ok');
+  });
+
+  it('leaves the request alone for a pass-through rule, or when nothing matches', async () => {
+    for (const rule of [mockRule({ action: { kind: 'passthrough' } }), null]) {
+      const { rec, last } = recorder();
+      const native = vi.fn(async () => new Response('real'));
+      const m = mocking(rule);
+      const target = { ...fetchTarget(native as unknown as typeof fetch), setTimeout: m.setTimeout };
+      installCapture(target, rec, m.mocker);
+      expect(await (await target.fetch('/api/items')).text()).toBe('real');
+      expect(native).toHaveBeenCalledTimes(1);
+      expect(last().data.mocked).toBeUndefined();
+    }
+  });
+
+  it('records the request at once but holds sending until the rules have arrived', async () => {
+    const { rec, records } = recorder();
+    const native = vi.fn(async () => new Response('real'));
+    let open!: () => void;
+    const gate = new Promise<void>((resolve) => (open = resolve));
+    const m = mocking(null, gate);
+    const target = { ...fetchTarget(native as unknown as typeof fetch), setTimeout: m.setTimeout };
+    installCapture(target, rec, m.mocker);
+
+    const pending = target.fetch('/api/items');
+    expect(records.size).toBe(1);
+    await flush();
+    expect(native).not.toHaveBeenCalled();
+    open();
+    await pending;
+    expect(native).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('replay', () => {
   it('sends through the native fetch, not the patched one, and records a request linked to the original', async () => {

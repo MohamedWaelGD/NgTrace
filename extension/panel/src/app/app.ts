@@ -4,6 +4,7 @@ import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { ComponentTree } from './component-tree';
 import { ICONS } from './icons';
 import { InspectorStore } from './inspector.store';
+import { MocksPane } from './mocks-pane';
 import { QuickCopyMenu } from './quick-copy-menu';
 import { clamp, PANE_MIN, PaneLayout, Splitter } from './layout';
 import { RequestDetail } from './request-detail';
@@ -12,7 +13,7 @@ import { RequestTimeline } from './request-timeline';
 
 @Component({
   selector: 'app-root',
-  imports: [ComponentTree, RequestTable, RequestTimeline, RequestDetail, HugeiconsIconComponent, Splitter, QuickCopyMenu],
+  imports: [ComponentTree, RequestTable, RequestTimeline, MocksPane, RequestDetail, HugeiconsIconComponent, Splitter, QuickCopyMenu],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

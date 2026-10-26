@@ -23,6 +23,7 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
         }
         <span class="spacer"></span>
         <label class="unmasked"><input type="checkbox" [checked]="unmasked()" (change)="unmasked.set(!unmasked())" /> Unmasked</label>
+        <button (click)="store.mockFrom(r)" data-testid="mock-this" title="Create a Mock Rule from this request">Mock this request…</button>
         <button (click)="copy(r.url, 'URL')" title="Copy URL"><hugeicons-icon [icon]="icons.url" [size]="14" /> URL</button>
         <button (click)="copy(curl(), 'cURL')" data-testid="copy-curl" title="Copy as cURL"><hugeicons-icon [icon]="icons.curl" [size]="14" /> cURL</button>
         <button (click)="copy(fetchCode(), 'fetch')" title="Copy as fetch"><hugeicons-icon [icon]="icons.fetch" [size]="14" /> fetch</button>
@@ -46,6 +47,9 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
       <div class="body" data-testid="detail">
         @switch (tab()) {
           @case ('headers') {
+            @if (r.mocked) {
+              <div class="muted" data-testid="mocked-note">Answered by a Mock Rule: this request never reached the network, so there is no wire data.</div>
+            }
             <section>
               <h4>General</h4>
               <div class="kv"><span>Request URL</span><span class="mono">{{ r.url }}</span></div>

@@ -1,3 +1,5 @@
+import type { MockRule } from './mock';
+
 /** Shared data model and message contracts between hook ↔ content ↔ background ↔ panel. */
 
 export type AngularStatus =
@@ -65,6 +67,8 @@ export interface CapturedRequest {
   attribution: Attribution;
   /** Set on a Replayed Request: the id of the Captured Request it was re-sent from. */
   replayOf?: string;
+  /** Set when a Mock Rule answered (or failed) this request instead of the network. */
+  mocked?: boolean;
   /** Browser-level request headers from the DevTools HAR, once Enriched. */
   enrichment: { requestHeaders: Header[]; serverTiming?: number; phases?: TimingPhase[] } | null;
 }
@@ -168,6 +172,8 @@ export type HookMessage =
   | { type: 'tree'; pageId: string; tree: TreeNode[] }
   | { type: 'request'; pageId: string; request: CapturedRequest }
   | { type: 'navigation'; pageId: string; event: NavEvent }
+  /** A Mock Rule problem the user should know about, e.g. requests were sent before the rules arrived. */
+  | { type: 'mock-warning'; pageId: string; message: string }
   | { type: 'details'; pageId: string; details: ComponentDetails }
   | { type: 'expanded'; pageId: string; target: ValueTarget; path: string[]; entries: ValueEntry[] }
   | { type: 'picked'; pageId: string; id: number; element: string }
@@ -182,6 +188,9 @@ export type PanelCommand =
   | { type: 'expand'; target: ValueTarget; path: string[] }
   | { type: 'clear' }
   | { type: 'replay'; spec: ReplaySpec }
+  /** Arms these Mock Rules for as long as the panel keeps sending them (ADR 8); sent again as a heartbeat. */
+  | { type: 'mock-rules'; rules: MockRule[] }
+  | { type: 'mock-disarm' }
   | { type: 'pause'; paused: boolean }
   /** Live Values: follow this target and these expanded paths (always includes the root); null stops. */
   | { type: 'live-target'; target: ValueTarget | null; paths: string[][] };

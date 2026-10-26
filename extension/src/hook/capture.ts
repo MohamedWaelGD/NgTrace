@@ -1,4 +1,4 @@
-import type { Body, CapturedRequest, Header, ReplaySpec } from '@ngapi/protocol';
+import type { Body, CapturedRequest, Header, MockRule, ReplaySpec } from '@ngapi/protocol';
 import { isTextualMime, mimeOf, readCapped, requestBody, textBody } from './body';
 
 export type RequestPart = Pick<CapturedRequest, 'method' | 'url' | 'requestHeaders' | 'requestBody'>;
@@ -10,7 +10,17 @@ export interface Recorder {
   update(id: string, patch: Partial<CapturedRequest>): void;
 }
 
+/** Decides, per recorded request, whether a Mock Rule applies (ADR 8). */
+export interface Mocker {
+  /** Non-null while sending must wait for the panel's rules to arrive. */
+  gate(): Promise<void> | null;
+  /** The rule for a request that was just recorded, or null. */
+  match(id: string): MockRule | null;
+}
+
 export interface CaptureTarget {
+  /** The page's own timer, captured before Zone patches it; used for rule delays. */
+  setTimeout?: typeof setTimeout;
   fetch: typeof fetch;
   XMLHttpRequest: typeof XMLHttpRequest;
   location: { href: string };
@@ -48,11 +58,13 @@ export interface Capture {
   replay(spec: ReplaySpec, extra?: Partial<CapturedRequest>): void;
 }
 
-export function installCapture(target: CaptureTarget, recorder: Recorder): Capture {
+export function installCapture(target: CaptureTarget, recorder: Recorder, mocker?: Mocker): Capture {
   const safe = guarded(recorder);
   const native = target.fetch;
-  patchFetch(target, safe);
-  patchXhr(target, safe);
+  const timer = target.setTimeout ?? globalThis.setTimeout;
+  const later = (fn: () => void, ms: number) => void timer(fn, ms);
+  patchFetch(target, safe, mocker, later);
+  patchXhr(target, safe, mocker, later);
   return { replay: (spec, extra) => replay(target, native, safe, spec, extra) };
 }
 
@@ -105,7 +117,47 @@ function attempt<T>(fn: () => T, fallback: T): T {
   }
 }
 
-function patchFetch(target: CaptureTarget, recorder: Recorder): void {
+type Later = (fn: () => void, ms: number) => void;
+
+const BODYLESS = new Set([204, 205, 304]);
+
+function wait(later: Later, ms: number, signal?: AbortSignal | null): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    later(resolve, ms);
+    signal?.addEventListener('abort', () => reject(new DOMException('The user aborted a request.', 'AbortError')), { once: true });
+  });
+}
+
+/** Applies a Mock Rule to a fetch: canned response, network error, or the real request after a delay. */
+function mockFetch(
+  rule: MockRule,
+  id: string,
+  recorder: Recorder,
+  later: Later,
+  signal: AbortSignal | null | undefined,
+  real: () => Promise<Response>,
+): Promise<Response> {
+  const delayed = wait(later, rule.delayMs, signal);
+  const action = rule.action;
+  switch (action.kind) {
+    case 'respond':
+      return delayed.then(() => {
+        recorder.update(id, { mocked: true });
+        const status = Math.min(599, Math.max(200, action.status));
+        return new Response(BODYLESS.has(status) ? null : action.body, { status, headers: action.headers });
+      });
+    case 'error':
+      return delayed.then(() => {
+        recorder.update(id, { mocked: true });
+        throw new TypeError('Failed to fetch (mocked)');
+      });
+    default:
+      return delayed.then(real);
+  }
+}
+
+function patchFetch(target: CaptureTarget, recorder: Recorder, mocker: Mocker | undefined, later: Later): void {
   const original = target.fetch;
   target.fetch = function (this: unknown, input: RequestInfo | URL, init?: RequestInit) {
     const isRequest = typeof Request !== 'undefined' && input instanceof Request;
@@ -129,7 +181,13 @@ function patchFetch(target: CaptureTarget, recorder: Recorder): void {
         .then((text) => recorder.update(id, { requestBody: formOrText(text, mime) }))
         .catch(() => {});
     }
-    return original.call(this, input, init).then(
+    const real = () => original.call(this, input, init);
+    const dispatch = () => {
+      const rule = id && mocker ? attempt(() => mocker.match(id), null) : null;
+      return rule ? mockFetch(rule, id, recorder, later, init?.signal ?? (isRequest ? input.signal : null), real) : real();
+    };
+    const gate = id && mocker ? attempt(() => mocker.gate(), null) : null;
+    return (gate ? gate.then(dispatch) : dispatch()).then(
       (res) => {
         if (id) attempt(() => recordFetchResponse(id, res, recorder), undefined);
         return res;
@@ -184,13 +242,15 @@ interface XhrState {
   headers: Header[];
   id?: string;
   failure?: string;
+  /** send() is being held back (rules loading, or a rule delay): abort() must still be reported. */
+  pending?: boolean;
 }
 
 const FAILURES: Record<string, string> = { error: 'Network error', abort: 'Aborted', timeout: 'Timed out' };
 
-function patchXhr(target: CaptureTarget, recorder: Recorder): void {
+function patchXhr(target: CaptureTarget, recorder: Recorder, mocker: Mocker | undefined, later: Later): void {
   const proto = target.XMLHttpRequest.prototype;
-  const { open, setRequestHeader, send, addEventListener } = proto;
+  const { open, setRequestHeader, send, addEventListener, abort } = proto;
   const states = new WeakMap<XMLHttpRequest, XhrState>();
 
   proto.open = function (this: XMLHttpRequest, method: string, url: string | URL, ...rest: unknown[]) {
@@ -220,8 +280,95 @@ function patchXhr(target: CaptureTarget, recorder: Recorder): void {
         addEventListener.call(this, 'loadend', () => attempt(() => recordXhrResponse(this, state, recorder), undefined));
       }, undefined);
     }
-    return send.call(this, body);
+    if (!state?.id || !mocker) return send.call(this, body);
+    const id = state.id;
+    const run = () => {
+      if (!state.pending) return;
+      state.pending = false;
+      const rule = attempt(() => mocker.match(id), null);
+      if (!rule) return send.call(this, body);
+      const after = (fn: () => void) => {
+        state.pending = true;
+        later(() => {
+          if (!state.pending) return;
+          state.pending = false;
+          fn();
+        }, rule.delayMs);
+      };
+      const action = rule.action;
+      const answer = () => {
+        if (action.kind === 'respond') mockXhrResponse(this, state, action, recorder);
+        else if (action.kind === 'error') mockXhrError(this, id, recorder);
+        else send.call(this, body);
+      };
+      if (rule.delayMs > 0) after(answer);
+      else answer();
+    };
+    const gate = attempt(() => mocker.gate(), null);
+    state.pending = true;
+    if (gate) void gate.then(run);
+    else run();
   };
+
+  proto.abort = function (this: XMLHttpRequest) {
+    const state = states.get(this);
+    if (state?.pending) {
+      // Held back by a rule (never sent): report the abort the way a real request would.
+      state.pending = false;
+      dispatch(this, 'abort');
+      dispatch(this, 'loadend');
+    }
+    return abort.call(this);
+  };
+}
+
+function dispatch(xhr: XMLHttpRequest, type: string): void {
+  xhr.dispatchEvent(type === 'readystatechange' ? new Event(type) : new ProgressEvent(type));
+}
+
+function define(xhr: XMLHttpRequest, props: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(props)) Object.defineProperty(xhr, key, { value, configurable: true, writable: true });
+}
+
+function mockXhrError(xhr: XMLHttpRequest, id: string, recorder: Recorder): void {
+  recorder.update(id, { mocked: true });
+  define(xhr, { readyState: 4, status: 0, statusText: '' });
+  dispatch(xhr, 'readystatechange');
+  dispatch(xhr, 'error');
+  dispatch(xhr, 'loadend');
+}
+
+/** Makes the XHR look like it received `action`'s response, then fires the events a real one would. */
+function mockXhrResponse(xhr: XMLHttpRequest, state: XhrState, action: Extract<MockRule['action'], { kind: 'respond' }>, recorder: Recorder): void {
+  if (state.id) recorder.update(state.id, { mocked: true });
+  const headers = action.headers;
+  const lookup = (name: string) => headers.find(([n]) => n.toLowerCase() === name.toLowerCase())?.[1] ?? null;
+  const text = action.body;
+  const responseType = xhr.responseType;
+  let response: unknown = text;
+  if (responseType === 'json') {
+    try {
+      response = JSON.parse(text);
+    } catch {
+      response = null;
+    }
+  } else if (responseType === 'blob') response = new Blob([text]);
+  else if (responseType === 'arraybuffer') response = new TextEncoder().encode(text).buffer;
+  define(xhr, {
+    status: action.status,
+    statusText: '',
+    responseURL: state.url,
+    response,
+    responseText: responseType === '' || responseType === 'text' ? text : undefined,
+    getAllResponseHeaders: () => headers.map(([n, v]) => `${n}: ${v}\r\n`).join(''),
+    getResponseHeader: lookup,
+  });
+  for (const readyState of [2, 3, 4]) {
+    define(xhr, { readyState });
+    dispatch(xhr, 'readystatechange');
+  }
+  dispatch(xhr, 'load');
+  dispatch(xhr, 'loadend');
 }
 
 function recordXhrResponse(xhr: XMLHttpRequest, state: XhrState, recorder: Recorder): void {

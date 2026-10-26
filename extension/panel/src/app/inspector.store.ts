@@ -1,12 +1,14 @@
-import { computed, effect, Injectable, signal } from '@angular/core';
+import { computed, effect, Injectable, signal, untracked } from '@angular/core';
 import {
   createMasker,
+  bodyText,
   createRequestFilter,
   DEFAULT_MASKED_HEADERS,
   DEFAULT_DUPLICATE_WINDOW_MS,
   DEFAULT_QUICK_COPY_HEADERS,
   detectWaste,
   groupReplays,
+  type MockRule,
   type ReplaySpec,
   summariseWaste,
   enrich,
@@ -78,6 +80,13 @@ export class InspectorStore {
   readonly skipReplayConfirm = signal(false);
   readonly showWasteSummary = signal(false);
   readonly viewMode = signal<'table' | 'timeline'>('table');
+
+  // Mock Rules (ADR 8): saved per origin, armed in the hook only while this panel keeps sending them.
+  readonly mockRules = signal<MockRule[]>([]);
+  readonly showMocks = signal(false);
+  readonly mockWarning = signal<string | null>(null);
+  private mocksLoaded = false;
+  readonly activeMocks = computed(() => this.mockRules().filter((r) => r.enabled).length);
   /** Router events for the Timeline markers (same monotonic epoch as request starts). */
   readonly navigation = signal<NavEvent[]>([]);
 
@@ -239,6 +248,19 @@ export class InspectorStore {
 
   constructor() {
     effect(() => this.send({ type: 'live-target', target: this.liveTarget(), paths: this.livePaths() }));
+    effect(() => {
+      const origin = originOf(this.pageUrl());
+      if (origin) void this.loadMockRules(origin);
+    });
+    effect(() => {
+      const rules = this.mockRules();
+      if (!this.mocksLoaded) return;
+      const origin = originOf(untracked(() => this.pageUrl()));
+      if (origin) void chrome.storage?.local.set({ [MOCKS_KEY + origin]: rules });
+      this.armMocks();
+    });
+    // The hook drops the rules when these stop arriving (the panel closed).
+    setInterval(() => this.armMocks(), MOCK_HEARTBEAT_MS);
   }
 
   connect(): void {
@@ -255,6 +277,7 @@ export class InspectorStore {
     });
     this.send({ type: 'get-snapshot' });
     this.send({ type: 'pause', paused: this.paused() });
+    this.armMocks();
   }
 
   send(command: PanelCommand): void {
@@ -282,6 +305,9 @@ export class InspectorStore {
         break;
       case 'navigation':
         this.addNavigation(m.event);
+        break;
+      case 'mock-warning':
+        this.mockWarning.set(m.message);
         break;
       case 'details':
         if (m.details.id === this.selectedNodeId()) this.details.set(m.details);
@@ -342,6 +368,8 @@ export class InspectorStore {
       this.requests.set([]);
       this.selectedRequestId.set(null);
     }
+    this.mockWarning.set(null);
+    this.armMocks();
     if (!first) {
       this.send({ type: 'get-snapshot' });
       // A reloaded page starts a fresh hook that records by default.
@@ -361,6 +389,77 @@ export class InspectorStore {
       next[i] = { ...r, enrichment: list[i].enrichment ?? r.enrichment };
       return next;
     });
+  }
+
+  private async loadMockRules(origin: string): Promise<void> {
+    this.mocksLoaded = false;
+    const stored = await chrome.storage?.local.get(MOCKS_KEY + origin);
+    const rules = stored?.[MOCKS_KEY + origin];
+    this.mockRules.set(Array.isArray(rules) ? (rules as MockRule[]) : []);
+    this.mocksLoaded = true;
+    this.armMocks();
+  }
+
+  /** Tells the hook which rules to apply; repeated as a heartbeat so closing the panel disarms them. */
+  armMocks(): void {
+    if (this.mocksLoaded) this.send({ type: 'mock-rules', rules: this.mockRules() });
+  }
+
+  addMockRule(rule: Partial<MockRule> = {}): void {
+    const created: MockRule = {
+      id: crypto.randomUUID(),
+      enabled: true,
+      method: '*',
+      pattern: '',
+      regex: false,
+      component: null,
+      delayMs: 0,
+      action: { kind: 'respond', status: 200, headers: [['Content-Type', 'application/json']], body: '{}' },
+      ...rule,
+    };
+    this.mockRules.update((list) => [...list, created]);
+  }
+
+  updateMockRule(id: string, patch: Partial<MockRule>): void {
+    this.mockRules.update((list) => list.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  }
+
+  removeMockRule(id: string): void {
+    this.mockRules.update((list) => list.filter((r) => r.id !== id));
+  }
+
+  moveMockRule(id: string, delta: -1 | 1): void {
+    this.mockRules.update((list) => {
+      const i = list.findIndex((r) => r.id === id);
+      const j = i + delta;
+      if (i === -1 || j < 0 || j >= list.length) return list;
+      const next = list.slice();
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  }
+
+  /** "Mock this request…": a rule for this request's method, path and Owner Component, prefilled with its response. */
+  mockFrom(r: CapturedRequest): void {
+    let pattern = r.url;
+    try {
+      pattern = new URL(r.url).pathname;
+    } catch {
+      // keep the URL as is
+    }
+    const contentType = r.responseHeaders.find(([n]) => n.toLowerCase() === 'content-type');
+    this.addMockRule({
+      method: r.method,
+      pattern,
+      component: r.attribution.className,
+      action: {
+        kind: 'respond',
+        status: r.status ?? 200,
+        headers: contentType ? [contentType] : [['Content-Type', 'application/json']],
+        body: bodyText(r.responseBody) ?? '',
+      },
+    });
+    this.showMocks.set(true);
   }
 
   /** Enrichment from chrome.devtools.network (ADR 4). */
@@ -455,6 +554,17 @@ export class InspectorStore {
   toggleChip<T>(sig: { (): T[]; set(v: T[]): void }, chip: T): void {
     const list = sig();
     sig.set(list.includes(chip) ? list.filter((c) => c !== chip) : [...list, chip]);
+  }
+}
+
+const MOCKS_KEY = 'mocks:';
+const MOCK_HEARTBEAT_MS = 5000;
+
+function originOf(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
   }
 }
 
