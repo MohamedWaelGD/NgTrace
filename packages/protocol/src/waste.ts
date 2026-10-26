@@ -15,9 +15,10 @@ const IDEMPOTENT = new Set(['GET', 'HEAD']);
 const isAborted = (r: CapturedRequest) => r.error !== null && /abort/i.test(r.error);
 const isFailed = (r: CapturedRequest) => r.error !== null && !isAborted(r);
 
-/** Finds Waste Signals (Duplicate, Cancelled-then-refired) in Captured Requests; Replayed Requests are ignored. */
+/** Finds Waste Signals (Duplicate, Cancelled-then-refired) in Captured Requests; Replayed Requests and Retries are ignored. */
 export function detectWaste(requests: CapturedRequest[], windowMs: number): Map<string, WasteSignal[]> {
-  const sorted = requests.filter((r) => !r.replayOf).sort((a, b) => a.startTime - b.startTime);
+  // A Retry repeats a failed attempt on purpose: never Waste.
+  const sorted = requests.filter((r) => !r.replayOf && (r.attempt ?? 1) <= 1).sort((a, b) => a.startTime - b.startTime);
   const result = new Map<string, WasteSignal[]>();
   const add = (id: string, signal: WasteSignal) => result.set(id, [...(result.get(id) ?? []), signal]);
 

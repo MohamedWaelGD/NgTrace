@@ -69,6 +69,10 @@ export interface CapturedRequest {
   replayOf?: string;
   /** Set when a Mock Rule answered (or failed) this request instead of the network. */
   mocked?: boolean;
+  /** Set on a Retry: the id of the first attempt of its chain. */
+  retryOf?: string;
+  /** Attempt Number within a retry chain (1 for the first attempt), when the hook can tell. */
+  attempt?: number;
   /** Browser-level request headers from the DevTools HAR, once Enriched. */
   enrichment: { requestHeaders: Header[]; serverTiming?: number; phases?: TimingPhase[] } | null;
 }

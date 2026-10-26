@@ -1,6 +1,6 @@
 # Pure failure and retry-chain logic
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: none
 
 ## What
@@ -8,3 +8,6 @@ Blocked by: none
 
 ## Acceptance
 Unit tests: 4xx/5xx/network error counted, abort not; mocked failure counted; recovered chain; Retry never flagged as Duplicate; grouping for Unattributed by Owner Service.
+
+## Comments
+2026-10-26: Implemented (protocol failures.ts: isFailed, retryChains, summariseFailures; retryOf/attempt on CapturedRequest; detectWaste skips Retries).
