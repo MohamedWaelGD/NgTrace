@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { bearerToken, bodyText, headerValue, MASK, toCurl, toFetch, type Body, type Header } from '@ngapi/protocol';
+import { bearerToken, bodyText, headerValue, isEmptyDiff, MASK, toCurl, toFetch, type Body, type Header } from '@ngapi/protocol';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { copyText } from './clipboard';
 import { ICONS } from './icons';
@@ -10,7 +10,7 @@ import { JsonTree } from './json-tree';
 import { RequestReplay } from './request-replay';
 import { SourceActions } from './source-actions';
 
-type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiator' | 'replay';
+type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiator' | 'interceptors' | 'replay';
 
 @Component({
   selector: 'app-request-detail',
@@ -20,7 +20,15 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
       <div class="tabs">
         <button class="close" title="Close" aria-label="Close" (click)="store.selectRequest(null)"><hugeicons-icon [icon]="icons.close" [size]="14" /></button>
         @for (t of tabs; track t.id) {
-          <button [class.active]="tab() === t.id" (click)="tab.set(t.id)" [attr.data-testid]="'tab-' + t.id">{{ t.label }}</button>
+          <button
+            [class.active]="tab() === t.id"
+            [disabled]="t.id === 'interceptors' && !devBuild()"
+            [title]="t.id === 'interceptors' && !devBuild() ? 'Needs a development build' : ''"
+            (click)="tab.set(t.id)"
+            [attr.data-testid]="'tab-' + t.id"
+          >
+            {{ t.label }}
+          </button>
         }
         <span class="spacer"></span>
         <label class="unmasked"><input type="checkbox" [checked]="unmasked()" (change)="unmasked.set(!unmasked())" /> Unmasked</label>
@@ -50,6 +58,9 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
           @case ('headers') {
             @if (r.mocked) {
               <div class="muted" data-testid="mocked-note">Answered by a Mock Rule: this request never reached the network, so there is no wire data.</div>
+            }
+            @if (r.shortCircuitedBy) {
+              <div class="muted" data-testid="short-circuit-note">Answered by the interceptor <span class="mono">{{ r.shortCircuitedBy }}</span>: this request never reached the network.</div>
             }
             <section>
               <h4>General</h4>
@@ -144,6 +155,55 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
               <div class="kv"><span>Network (DevTools)</span><span>{{ r.enrichment!.serverTiming!.toFixed(1) }} ms</span></div>
             }
           }
+          @case ('interceptors') {
+            @if (r.interceptorSteps?.length) {
+              <ol class="steps" data-testid="interceptor-steps">
+                @for (s of r.interceptorSteps; track $index) {
+                  <li data-testid="interceptor-step">
+                    <div class="step-head">
+                      <span class="mono tag" data-testid="interceptor-name">{{ s.name }}</span>
+                      @if (s.kind === 'class') {
+                        <span class="muted">class (inside the legacy step)</span>
+                      }
+                      @if (s.shortCircuit) {
+                        <span class="sc" data-testid="short-circuit" title="Returned without calling next: nothing was sent">short-circuit</span>
+                      }
+                      @if (s.retries) {
+                        <span data-testid="interceptor-retries">
+                          {{ s.retries }} {{ s.retries === 1 ? 'retry' : 'retries' }}:
+                          @for (a of attemptsOf(r.id); track a.id) {
+                            <a href="" (click)="$event.preventDefault(); store.selectRequest(a)">#{{ a.attempt ?? $index + 1 }}</a>
+                          }
+                        </span>
+                      }
+                    </div>
+                    @if (s.diff; as diff) {
+                      @if (isEmptyDiff(diff)) {
+                        <div class="muted">Passed the request on unchanged.</div>
+                      } @else {
+                        @for (h of diff.added; track $index) {
+                          <div class="mono add" data-testid="diff-added">+ {{ h[0] }}: {{ headerShown(h[0], h[1]) }}</div>
+                        }
+                        @for (h of diff.removed; track $index) {
+                          <div class="mono del">− {{ h[0] }}: {{ headerShown(h[0], h[1]) }}</div>
+                        }
+                        @for (c of diff.changed; track $index) {
+                          <div class="mono chg">~ {{ c.name }}: {{ headerShown(c.name, c.before) }} → {{ headerShown(c.name, c.after) }}</div>
+                        }
+                        @for (f of diff.fields; track f.field) {
+                          <div class="mono chg">~ {{ f.field }}: {{ f.before || '∅' }} → {{ f.after || '∅' }}</div>
+                        }
+                      }
+                    } @else if (!s.shortCircuit) {
+                      <div class="muted">Has not called next yet.</div>
+                    }
+                  </li>
+                }
+              </ol>
+            } @else {
+              <div class="muted">No Interceptor Steps were recorded for this request (it did not go through HttpClient, or was sent before the hook found it).</div>
+            }
+          }
           @case ('replay') {
             <app-request-replay [request]="r" />
           }
@@ -224,6 +284,13 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
     .conf-stack { color: var(--warn); }
     .conf-none { color: var(--error); }
     .chain { padding: 4px 0; }
+    .steps { margin: 4px 0; padding-left: 20px; }
+    .steps li { padding: 3px 0; }
+    .step-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+    .sc { background: var(--badge); border-radius: 8px; padding: 0 6px; font-size: 11px; }
+    .add { color: var(--ok); }
+    .del { color: var(--error); }
+    .chg { color: var(--warn); }
   `,
 })
 export class RequestDetail {
@@ -240,6 +307,7 @@ export class RequestDetail {
     { id: 'preview', label: 'Preview' },
     { id: 'timing', label: 'Timing' },
     { id: 'initiator', label: 'Initiator' },
+    { id: 'interceptors', label: 'Interceptors' },
     { id: 'replay', label: 'Replay' },
   ];
   protected readonly statusLabel = statusLabel;
@@ -248,6 +316,19 @@ export class RequestDetail {
   protected readonly formatDuration = formatDuration;
 
   private readonly mask = computed(() => (this.unmasked() ? null : this.store.masker()));
+  protected readonly isEmptyDiff = isEmptyDiff;
+  /** Interceptor Steps need a development build (ADR 10). */
+  protected readonly devBuild = computed(() => this.store.status()?.kind === 'dev');
+
+  /** Masked headers stay masked in Interceptor Step diffs (unless "Unmasked"). */
+  protected headerShown(name: string, value: string): string {
+    return !this.unmasked() && this.store.masker().isMasked(name) ? MASK : value;
+  }
+
+  /** Every attempt of the request's retry chain. */
+  protected attemptsOf(id: string) {
+    return this.store.retryChains().get(id)?.attempts ?? [];
+  }
 
   protected readonly requestHeaders = computed(() => {
     const r = this.store.selectedRequest();

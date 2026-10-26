@@ -77,6 +77,8 @@ export interface CapturedRequest {
   retryOf?: string;
   /** Attempt Number within a retry chain (1 for the first attempt), when the hook can tell. */
   attempt?: number;
+  /** Set when an interceptor answered without calling `next` (e.g. from a cache): its name. Nothing reached the network. */
+  shortCircuitedBy?: string;
   /** Interceptor Steps in chain order (dev builds); absent when the hook could not observe the chain. */
   interceptorSteps?: InterceptorStep[];
   /** Browser-level request headers from the DevTools HAR, once Enriched. */

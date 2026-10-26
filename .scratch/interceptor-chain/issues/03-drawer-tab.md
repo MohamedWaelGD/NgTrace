@@ -1,6 +1,6 @@
 # Interceptors tab in the request drawer
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 02
 
 ## What
@@ -8,3 +8,6 @@ New tab listing Interceptor Steps: name, diff (masked headers masked), short-cir
 
 ## Acceptance
 e2e: a demo request shows the auth interceptor adding `Authorization` (masked) and the cache interceptor short-circuiting a repeat.
+
+## Comments
+2026-10-26: Implemented (Interceptors drawer tab: steps with masked header diffs, short-circuit marker, retry count with attempt links; disabled with 'Needs a development build' outside dev builds; e2e/interceptors.spec.ts).

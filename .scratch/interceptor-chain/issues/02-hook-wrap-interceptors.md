@@ -1,6 +1,6 @@
 # Hook: wrap functional and class interceptors
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 01
 
 ## What
@@ -8,3 +8,6 @@ From the patched `HttpClient.request` (`this.handler`), find the handler's injec
 
 ## Acceptance
 Unit tests with a fake handler/injector: steps recorded in order, header added by an auth interceptor, a cache interceptor short-circuits, `retry(1)` inside an interceptor gives attempt 2. Demo: add an auth-header interceptor, a short-circuiting cache interceptor and a retrying interceptor.
+
+## Comments
+2026-10-26: Implemented (hook interceptors.ts InterceptorTracker: wraps HTTP_INTERCEPTOR_FNS entries and HTTP_INTERCEPTORS intercept per handler, clears handler.chain; AngularInternals SendSlot carries steps and attempts; interceptor Retries get attempt/retryOf; short-circuited chains are recorded with shortCircuitedBy; demo auth/cache/retry interceptors on /interceptors; interceptors.test.ts).

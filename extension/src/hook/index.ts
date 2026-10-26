@@ -15,7 +15,9 @@ import {
 } from '@ngapi/protocol';
 import { AngularInternals } from './angular-internals';
 import { attribute, type AttributionInput } from './attribution';
-import { installCapture, type Recorder } from './capture';
+import { captureStack, installCapture, type Recorder } from './capture';
+import { textBody } from './body';
+import { InterceptorTracker } from './interceptors';
 import { OwnerContext } from './context';
 import { Inspector } from './inspect';
 import { LiveValues } from './live';
@@ -181,6 +183,9 @@ function start(): void {
       }
       if (!extra?.attribution && needsRetry(record)) pending.set(id, input);
       list(record);
+      // An interceptor's Retry bumped the retry count of the steps the first attempt shares.
+      const first = record.retryOf && record.interceptorSteps ? requests.get(record.retryOf) : undefined;
+      if (first && !unlistedIds.has(first.id)) post({ type: 'request', pageId, request: first });
       return id;
     },
     update(id, patch) {
@@ -207,6 +212,53 @@ function start(): void {
       return record ? mocks.match({ method: record.method, url: record.url, className: record.attribution.className }) : null;
     },
   });
+
+  // Interceptor Steps (ADR 10): on from page load in dev builds. A chain an interceptor answered
+  // itself never reaches fetch/XHR, so it is recorded here, with the response the interceptor gave.
+  const interceptors = new InterceptorTracker(internals, (request, steps, response) => {
+    const query = request.params.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+    let url = request.url + (query ? (request.url.includes('?') ? '&' : '?') + query : '');
+    try {
+      url = new URL(url, location.href).href;
+    } catch {
+      // keep it relative
+    }
+    const id = recorder.start(
+      'xhr',
+      captureStack(),
+      {
+        method: request.method,
+        url,
+        requestHeaders: request.headers,
+        requestBody: request.body === null ? { kind: 'none' } : textBody(request.body, null),
+      },
+      { shortCircuitedBy: steps.find((s) => s.shortCircuit)?.name ?? 'interceptor' },
+    );
+    const Observable = response?.constructor;
+    if (typeof Observable !== 'function' || typeof response.subscribe !== 'function') return response;
+    const finish = (patch: Partial<CapturedRequest>) => recorder.update(id, { endTime: Date.now(), ...patch });
+    return new Observable((subscriber: any) =>
+      response.subscribe({
+        next: (event: any) => {
+          // An HttpResponse (not a progress event): status, headers and body.
+          if (event && typeof event.status === 'number' && 'body' in event) {
+            const headers: [string, string][] = event.headers?.keys?.().flatMap((k: string) => (event.headers.getAll(k) ?? []).map((v: string) => [k, v])) ?? [];
+            const json = typeof event.body !== 'string';
+            const mime = json ? 'application/json' : null;
+            const text = json ? JSON.stringify(event.body ?? null) : event.body;
+            finish({ status: event.status, statusText: event.statusText ?? '', responseHeaders: headers, responseBody: textBody(text, mime), mime });
+          }
+          subscriber.next(event);
+        },
+        error: (err: any) => {
+          finish(typeof err?.status === 'number' && err.status > 0 ? { status: err.status, statusText: err.statusText ?? '' } : { error: String(err?.message ?? err) });
+          subscriber.error(err);
+        },
+        complete: () => subscriber.complete(),
+      }),
+    );
+  });
+  internals.onHandler = (handler) => interceptors.wrapHandler(handler);
 
   const reattribute = () => {
     for (const [id, input] of pending) {

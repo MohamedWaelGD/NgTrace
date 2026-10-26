@@ -1,3 +1,4 @@
+import type { InterceptorStep } from '@ngapi/protocol';
 import type { RoutePhase } from './attribution';
 import { captureStack } from './capture';
 
@@ -19,13 +20,19 @@ export function environmentInjectors(ng: any, el: Element): any[] {
   return path.filter((inj) => inj?.records instanceof Map);
 }
 
-/** The attempt of an HttpClient observable being subscribed; tags the first request recorded meanwhile. */
-interface AttemptSlot {
+/**
+ * One send through HttpClient: the attempt of the observable being subscribed (or an interceptor's
+ * re-subscription of `next`) and the Interceptor Steps of its chain. The first request recorded
+ * while it is current claims it.
+ */
+export interface SendSlot {
   attempt: number;
   /** Id of the chain's first attempt; null for a first attempt, or when it was never recorded. */
   retryOf: string | null;
-  claimed: boolean;
-  onClaim: (id: string) => void;
+  /** Id of the request that claimed this slot. */
+  claimedId: string | null;
+  /** Interceptor Steps of this send, in chain order (shared with its Retries). */
+  steps: InterceptorStep[];
 }
 
 /**
@@ -38,10 +45,12 @@ export class AngularInternals {
   routePhase: RoutePhase | null = null;
   /** Receives every router event (for the Timeline); set by the hook. */
   onRouterEvent: ((event: any) => void) | null = null;
+  /** Receives each HttpClient's handler before a request goes through it (Interceptor Steps, ADR 10). */
+  onHandler: ((handler: any) => void) | null = null;
   private routerAttached = false;
   private httpPatched = false;
   private attempts = 0;
-  private attemptSlot: AttemptSlot | null = null;
+  private slot: SendSlot | null = null;
 
   get done(): boolean {
     return this.routerAttached && this.httpPatched;
@@ -65,17 +74,35 @@ export class AngularInternals {
     }
   }
 
+  /** The send in progress, while an HttpClient observable (or an interceptor's `next`) is being subscribed. */
+  currentSlot(): SendSlot | null {
+    return this.slot;
+  }
+
+  /** Runs `fn` with `slot` as the send in progress. */
+  inSlot<T>(slot: SendSlot, fn: () => T): T {
+    const prev = this.slot;
+    this.slot = slot;
+    try {
+      return fn();
+    } finally {
+      this.slot = prev;
+    }
+  }
+
   /**
    * Called by the capture layer for each request it records: the Attempt Number (and the first
-   * attempt's id, for a Retry) when an HttpClient observable is being subscribed. Only the first
-   * request recorded during that subscription is tagged.
+   * attempt's id, for a Retry) and the Interceptor Steps of the send in progress. Only the first
+   * request recorded during that send is tagged.
    */
-  claimAttempt(id: string): { attempt: number; retryOf?: string } | null {
-    const slot = this.attemptSlot;
-    if (!slot || slot.claimed) return null;
-    slot.claimed = true;
-    slot.onClaim(id);
-    return slot.retryOf === null ? { attempt: slot.attempt } : { attempt: slot.attempt, retryOf: slot.retryOf };
+  claimAttempt(id: string): { attempt: number; retryOf?: string; interceptorSteps?: InterceptorStep[] } | null {
+    const slot = this.slot;
+    if (!slot || slot.claimedId !== null) return null;
+    slot.claimedId = id;
+    const claim: { attempt: number; retryOf?: string; interceptorSteps?: InterceptorStep[] } = { attempt: slot.attempt };
+    if (slot.retryOf !== null) claim.retryOf = slot.retryOf;
+    if (slot.steps.length) claim.interceptorSteps = slot.steps;
+    return claim;
   }
 
   /**
@@ -86,7 +113,8 @@ export class AngularInternals {
     this.httpPatched = true;
     const original = proto.request;
     const self = this;
-    proto.request = function (this: unknown, ...args: unknown[]) {
+    proto.request = function (this: any, ...args: unknown[]) {
+      if (this?.handler) self.onHandler?.(this.handler);
       const result = original.apply(this, args);
       const Observable = result?.constructor;
       if (typeof Observable !== 'function' || typeof result.subscribe !== 'function') return result;
@@ -96,28 +124,27 @@ export class AngularInternals {
       return new Observable((subscriber: any) => {
         const retry = failed;
         failed = null;
-        let rootId = retry?.rootId ?? null;
-        const attempt = retry ? retry.attempt + 1 : 1;
-        const slot: AttemptSlot = { attempt, retryOf: rootId, claimed: false, onClaim: (id) => (rootId ??= id) };
-        const prev = { stack: self.creationStack, slot: self.attemptSlot };
+        const slot: SendSlot = { attempt: retry ? retry.attempt + 1 : 1, retryOf: retry?.rootId ?? null, claimedId: null, steps: [] };
+        const rootId = () => slot.retryOf ?? slot.claimedId;
+        const prevStack = self.creationStack;
         self.creationStack = stack;
-        self.attemptSlot = slot;
         try {
-          return result.subscribe({
-            next: (value: unknown) => subscriber.next(value),
-            error: (err: unknown) => {
-              // Before forwarding: retry() re-subscribes synchronously from inside error().
-              failed = { rootId, attempt };
-              subscriber.error(err);
-            },
-            complete: () => {
-              failed = null;
-              subscriber.complete();
-            },
-          });
+          return self.inSlot(slot, () =>
+            result.subscribe({
+              next: (value: unknown) => subscriber.next(value),
+              error: (err: unknown) => {
+                // Before forwarding: retry() re-subscribes synchronously from inside error().
+                failed = { rootId: rootId(), attempt: slot.attempt };
+                subscriber.error(err);
+              },
+              complete: () => {
+                failed = null;
+                subscriber.complete();
+              },
+            }),
+          );
         } finally {
-          self.creationStack = prev.stack;
-          self.attemptSlot = prev.slot;
+          self.creationStack = prevStack;
         }
       });
     };

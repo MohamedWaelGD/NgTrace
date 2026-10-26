@@ -10,7 +10,7 @@ const products = [
   { id: 2, name: 'Hat', price: 25 },
   { id: 3, name: 'Scarf', price: 30 },
 ];
-/** Calls per /api/flaky id: the first one fails. */
+/** Calls per /api/flaky (or /api/unstable) id: the first one fails. */
 const flakyCalls = new Map();
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.map': 'application/json' };
 
@@ -41,7 +41,8 @@ function api(req, res, url, body) {
   }
   if (path === '/api/slow') return setTimeout(() => json(res, 200, { ok: true }), 300);
   if (path === '/api/error') return json(res, 500, { error: 'boom' });
-  if (path === '/api/flaky') {
+  if (path === '/api/profile') return json(res, 200, { name: 'Ada' });
+  if (path === '/api/flaky' || path === '/api/unstable') {
     const id = url.searchParams.get('id') ?? '';
     const calls = (flakyCalls.get(id) ?? 0) + 1;
     flakyCalls.set(id, calls);
