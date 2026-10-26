@@ -140,3 +140,49 @@ test.describe('request mocking while Recording is paused', () => {
     await expect(rows(panel)).toHaveCount(1);
   });
 });
+
+test.describe('request mocking without a reload', () => {
+  test('applies to requests fired after the rule was added', async ({ openInspector }) => {
+    const { app, panel } = await openInspector('/waste');
+    await addRule(panel, { pattern: '/api/products/1', method: 'GET', status: 500, body: '{}' });
+    await app.click('#fire-duplicates');
+    await expect(panel.getByTestId('mocked-badge')).toHaveCount(2);
+  });
+
+  test('a pattern typed without a leading slash still matches the path', async ({ openInspector }) => {
+    const { app, panel } = await openInspector('/waste');
+    await addRule(panel, { pattern: 'api/products/*', status: 500, body: '{}' });
+    await app.click('#fire-duplicates');
+    await expect(panel.getByTestId('mocked-badge')).toHaveCount(2);
+  });
+});
+
+test.describe('mock rule editor helpers', () => {
+  test('Owner Component suggests known components once each, filters as you type, and fills on pick', async ({ openInspector }) => {
+    const { panel } = await openInspector('/');
+    await expect(rows(panel).filter({ hasText: 'products?page=1' })).toHaveCount(1);
+    await panel.getByTestId('mocks-toggle').click();
+    await panel.getByTestId('mock-add').click();
+    const field = panel.getByTestId('mock-component');
+    await field.focus();
+    const list = panel.getByTestId('component-suggestions');
+    await expect(list).toBeVisible();
+    const all = await list.locator('li').allInnerTexts();
+    expect(all).toContain('ProductListComponent');
+    expect(new Set(all).size).toBe(all.length);
+
+    await field.fill('productl');
+    await expect(list.locator('li')).toHaveText(['ProductListComponent']);
+    await list.locator('li').first().click();
+    await expect(field).toHaveValue('ProductListComponent');
+  });
+
+  test('each rule shows how many captured requests it matches', async ({ openInspector }) => {
+    const { panel } = await openInspector('/');
+    await expect(rows(panel).filter({ hasText: 'products?page=1' })).toHaveCount(1);
+    await addRule(panel, { pattern: '/api/products' });
+    await expect(panel.getByTestId('mock-matches')).toHaveText('Matches 1 captured request');
+    await panel.getByTestId('mock-pattern').fill('/api/nothing');
+    await expect(panel.getByTestId('mock-matches')).toHaveText('Matches 0 captured requests');
+  });
+});

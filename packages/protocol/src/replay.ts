@@ -68,3 +68,29 @@ export function groupReplays(requests: CapturedRequest[]): CapturedRequest[] {
   for (const r of requests) if (!(r.replayOf && ids.has(r.replayOf))) place(r);
   return grouped;
 }
+
+/** Splits a URL into the part before `?` and its query as editable rows (order and repeats kept). */
+export function splitUrl(url: string): { base: string; query: Header[] } {
+  const i = url.indexOf('?');
+  if (i === -1) return { base: url.split('#')[0], query: [] };
+  const base = url.slice(0, i);
+  const query = [...new URLSearchParams(url.slice(i + 1).split('#')[0])].map(([n, v]) => [n, v] as Header);
+  return { base, query };
+}
+
+/** Rebuilds a URL from its base and query rows; rows without a name are skipped. */
+export function joinUrl(base: string, query: Header[]): string {
+  const params = new URLSearchParams();
+  for (const [name, value] of query) if (name.trim()) params.append(name.trim(), value);
+  const text = params.toString();
+  return text ? `${base}?${text}` : base;
+}
+
+/** Pretty-prints or minifies JSON text; null when it is not valid JSON. */
+export function formatJson(text: string, mode: 'pretty' | 'minify'): string | null {
+  try {
+    return JSON.stringify(JSON.parse(text), null, mode === 'pretty' ? 2 : undefined);
+  } catch {
+    return null;
+  }
+}

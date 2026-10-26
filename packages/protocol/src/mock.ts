@@ -35,13 +35,21 @@ export interface MockTarget {
 const escapeRegex = (s: string) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
 const globToRegex = (glob: string) => new RegExp(`^${glob.split('*').map(escapeRegex).join('.*')}$`);
 
+/** `localhost:4200/api/*` or `api.example.com/v1`: the first segment looks like a host. */
+function isHostStyle(pattern: string): boolean {
+  const first = pattern.split('/')[0];
+  return !pattern.startsWith('/') && /^(localhost|[^*]*[.:][^*]*)$/.test(first);
+}
+
 function matchesUrl(rule: MockRule, url: string): boolean {
   if (rule.regex) return new RegExp(rule.pattern).test(url);
   const pattern = rule.pattern.trim();
-  if (!pattern.startsWith('/')) return globToRegex(pattern).test(url);
+  if (pattern.includes('://') || pattern.startsWith('*')) return globToRegex(pattern).test(url);
+  if (isHostStyle(pattern)) return globToRegex(pattern).test(url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, ''));
   try {
     const parsed = new URL(url);
-    return globToRegex(pattern).test(parsed.pathname + (pattern.includes('?') ? parsed.search : ''));
+    const path = pattern.startsWith('/') ? pattern : `/${pattern}`;
+    return globToRegex(path).test(parsed.pathname + (pattern.includes('?') ? parsed.search : ''));
   } catch {
     return false;
   }

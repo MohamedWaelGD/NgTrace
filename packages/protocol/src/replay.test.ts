@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createMasker, MASK } from './export';
-import { buildReplay, groupReplays, needsConfirmation, replayability } from './replay';
+import { buildReplay, formatJson, groupReplays, joinUrl, needsConfirmation, replayability, splitUrl } from './replay';
 import { makeRequest } from './testing';
 import type { Body } from './types';
 
@@ -77,5 +77,40 @@ describe('groupReplays', () => {
     const replayA = makeRequest({ id: 'ra', replayOf: 'a' });
     const orphan = makeRequest({ id: 'rx', replayOf: 'gone' });
     expect(groupReplays([a, b, replayA, orphan]).map((r) => r.id)).toEqual(['a', 'ra', 'b', 'rx']);
+  });
+});
+
+describe('splitUrl and joinUrl', () => {
+  it('splits a URL into its base and ordered query rows, keeping repeated and empty values', () => {
+    expect(splitUrl('http://localhost/api/s?q=a%20b&tag=1&tag=2&flag=')).toEqual({
+      base: 'http://localhost/api/s',
+      query: [['q', 'a b'], ['tag', '1'], ['tag', '2'], ['flag', '']],
+    });
+    expect(splitUrl('http://localhost/api/s')).toEqual({ base: 'http://localhost/api/s', query: [] });
+  });
+
+  it('joins the rows back, encoding values and skipping rows without a name', () => {
+    expect(
+      joinUrl('http://localhost/api/s', [['q', 'a b&c'], ['', 'ignored'], ['tag', '1'], ['tag', '2']]),
+    ).toBe('http://localhost/api/s?q=a+b%26c&tag=1&tag=2');
+    expect(joinUrl('http://localhost/api/s', [])).toBe('http://localhost/api/s');
+  });
+
+  it('round-trips a URL', () => {
+    const url = 'http://localhost/api/s?a=1&b=2';
+    const { base, query } = splitUrl(url);
+    expect(joinUrl(base, query)).toBe(url);
+  });
+});
+
+describe('formatJson', () => {
+  it('pretty-prints and minifies valid JSON', () => {
+    expect(formatJson('{"a":[1,2],"b":{"c":true}}', 'pretty')).toBe('{\n  "a": [\n    1,\n    2\n  ],\n  "b": {\n    "c": true\n  }\n}');
+    expect(formatJson('{\n  "a": 1\n}', 'minify')).toBe('{"a":1}');
+  });
+
+  it('returns null for text that is not JSON', () => {
+    expect(formatJson('{"a":', 'pretty')).toBeNull();
+    expect(formatJson('', 'pretty')).toBeNull();
   });
 });

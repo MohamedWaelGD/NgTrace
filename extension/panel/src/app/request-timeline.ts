@@ -1,12 +1,16 @@
-import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, signal, untracked, viewChild } from '@angular/core';
 import {
+  axisTicks,
+  clampViewport,
   colorIndex,
+  earliestStart,
   fitAll,
   fitNavigation,
   panViewport,
   placeSpan,
   routePhaseBands,
   spanOf,
+  thumbOf,
   visibleRows,
   zoomViewport,
   type CapturedRequest,
@@ -23,9 +27,9 @@ const LABEL_WIDTH = 200;
   selector: 'app-request-timeline',
   template: `
     <div class="bar-tools">
-      <button (click)="fitAll()" data-testid="timeline-fit-all" title="Zoom to every request">Fit all</button>
+      <button (click)="fitAll()" data-testid="timeline-fit-all" title="Show every request and follow new ones">Fit all</button>
       <button (click)="fitNavigation()" data-testid="timeline-fit-nav" title="Zoom to the latest navigation">Fit navigation</button>
-      <span class="hint">Wheel to zoom · drag to pan</span>
+      <span class="hint">Ctrl+wheel to zoom · Shift+wheel, drag or the scrollbar to move through time · wheel scrolls rows</span>
     </div>
     <div class="axis">
       <span class="label-col"></span>
@@ -34,6 +38,9 @@ const LABEL_WIDTH = 200;
           <span class="tick" [style.left.%]="t.left">{{ t.label }}</span>
         }
       </div>
+    </div>
+    <div class="hscroll" #hscroll (pointerdown)="thumbDown($event)" (pointermove)="thumbMove($event)" (pointerup)="thumbUp($event)" data-testid="timeline-scrollbar">
+      <div class="thumb" [style.left.%]="thumb().left" [style.width.%]="thumb().width" data-testid="timeline-thumb"></div>
     </div>
     <div class="body" #body (scroll)="scrollTop.set(body.scrollTop)" data-testid="timeline">
       <div class="canvas" [style.height.px]="rows().length * rowHeight">
@@ -85,6 +92,9 @@ const LABEL_WIDTH = 200;
     .ticks { position: relative; flex: 1; }
     .tick { position: absolute; top: 2px; font-size: 10px; color: var(--muted); padding-left: 3px; border-left: 1px solid var(--border); }
     .body { flex: 1; overflow: auto; position: relative; }
+    .hscroll { position: relative; height: 12px; margin-left: 200px; background: var(--toolbar); border-bottom: 1px solid var(--border); cursor: pointer; touch-action: none; }
+    .thumb { position: absolute; top: 2px; bottom: 2px; background: var(--muted); opacity: 0.6; border-radius: 4px; min-width: 8px; }
+    .hscroll:hover .thumb { opacity: 0.9; }
     .canvas { position: relative; }
     .overlay { position: absolute; left: 200px; right: 0; top: 0; bottom: 0; pointer-events: none; overflow: hidden; }
     .marker { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--accent); opacity: 0.7; }
@@ -111,14 +121,31 @@ export class RequestTimeline {
   protected readonly store = inject(InspectorStore);
   protected readonly rowHeight = ROW_HEIGHT;
   private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
+  private readonly hscroll = viewChild.required<ElementRef<HTMLElement>>('hscroll');
   protected readonly scrollTop = signal(0);
   /** null: follow every visible request. */
   private readonly viewport = signal<Viewport | null>(null);
   private drag: { x: number; vp: Viewport; width: number } | null = null;
+  private thumbGrab: number | null = null;
 
   private readonly now = () => Date.now();
 
-  protected readonly vp = computed<Viewport>(() => this.viewport() ?? fitAll(this.store.visibleRequests(), this.now()) ?? { start: 0, end: 1000 });
+  /** Everything the scrollbar can reach: all visible requests. */
+  private readonly total = computed<Viewport>(() => fitAll(this.store.visibleRequests(), this.now()) ?? { start: 0, end: 1000 });
+
+  protected readonly vp = computed<Viewport>(() => this.viewport() ?? this.total());
+  protected readonly thumb = computed(() => thumbOf(this.total(), this.vp()));
+
+  constructor() {
+    // A new page, or a cleared log, goes back to following the data.
+    effect(() => {
+      this.store.pageId();
+      untracked(() => this.viewport.set(null));
+    });
+    effect(() => {
+      if (!this.store.requests().length) untracked(() => this.viewport.set(null));
+    });
+  }
 
   protected readonly rows = computed(() => this.store.visibleRequests());
 
@@ -151,24 +178,62 @@ export class RequestTimeline {
 
   protected readonly ticks = computed(() => {
     const vp = this.vp();
-    const width = vp.end - vp.start;
-    const count = 6;
-    return Array.from({ length: count }, (_, i) => ({ left: (i / count) * 100, label: formatOffset((i / count) * width) }));
+    return axisTicks(vp, earliestStart(this.store.visibleRequests(), this.now()) ?? vp.start);
   });
 
   protected fitAll(): void {
-    this.viewport.set(fitAll(this.store.visibleRequests(), this.now()));
+    this.viewport.set(null);
   }
 
   protected fitNavigation(): void {
     this.viewport.set(fitNavigation(this.store.navigation(), this.store.visibleRequests(), this.now()));
   }
 
+  /** Ctrl/Cmd+wheel zooms at the cursor, Shift+wheel (or a sideways wheel) pans; a plain wheel scrolls the rows. */
   protected onWheel(event: WheelEvent): void {
-    event.preventDefault();
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    const anchor = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-    this.viewport.set(zoomViewport(this.vp(), event.deltaY < 0 ? 0.8 : 1.25, anchor));
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      const anchor = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+      this.viewport.set(clampViewport(zoomViewport(this.vp(), event.deltaY < 0 ? 0.8 : 1.25, anchor), this.total()));
+      return;
+    }
+    const sideways = event.shiftKey ? event.deltaY || event.deltaX : event.deltaX;
+    if (!sideways) return;
+    event.preventDefault();
+    const vp = this.vp();
+    this.viewport.set(clampViewport(panViewport(vp, (sideways / rect.width) * (vp.end - vp.start)), this.total()));
+  }
+
+  protected thumbDown(event: PointerEvent): void {
+    const bar = this.hscroll().nativeElement;
+    bar.setPointerCapture?.(event.pointerId);
+    const rect = bar.getBoundingClientRect();
+    const thumb = this.thumb();
+    const thumbLeft = rect.left + (thumb.left / 100) * rect.width;
+    const thumbWidth = (thumb.width / 100) * rect.width;
+    const onThumb = event.clientX >= thumbLeft && event.clientX <= thumbLeft + thumbWidth;
+    // Grab the thumb where it was hit; a click on the bar centres the thumb on the pointer.
+    this.thumbGrab = onThumb ? event.clientX - thumbLeft : thumbWidth / 2;
+    this.moveThumb(event.clientX);
+  }
+
+  protected thumbMove(event: PointerEvent): void {
+    if (this.thumbGrab !== null) this.moveThumb(event.clientX);
+  }
+
+  protected thumbUp(event: PointerEvent): void {
+    this.hscroll().nativeElement.releasePointerCapture?.(event.pointerId);
+    this.thumbGrab = null;
+  }
+
+  private moveThumb(clientX: number): void {
+    const rect = this.hscroll().nativeElement.getBoundingClientRect();
+    const total = this.total();
+    const vp = this.vp();
+    const left = (clientX - this.thumbGrab! - rect.left) / rect.width;
+    const start = total.start + left * (total.end - total.start);
+    this.viewport.set(clampViewport({ start, end: start + (vp.end - vp.start) }, total));
   }
 
   protected dragStart(event: PointerEvent): void {
@@ -180,7 +245,7 @@ export class RequestTimeline {
   protected dragMove(event: PointerEvent): void {
     if (!this.drag) return;
     const span = this.drag.vp.end - this.drag.vp.start;
-    this.viewport.set(panViewport(this.drag.vp, (-(event.clientX - this.drag.x) / this.drag.width) * span));
+    this.viewport.set(clampViewport(panViewport(this.drag.vp, (-(event.clientX - this.drag.x) / this.drag.width) * span), this.total()));
   }
 
   protected dragEnd(event: PointerEvent): void {
@@ -203,8 +268,4 @@ function rowOf(request: CapturedRequest, index: number, vp: Viewport, now: numbe
     phases: total > 0 ? request.enrichment!.phases! : [],
     title: `${owner} · ${Math.round(span.end - span.start)} ms`,
   };
-}
-
-function formatOffset(ms: number): string {
-  return ms < 1000 ? `+${Math.round(ms)} ms` : `+${(ms / 1000).toFixed(2)} s`;
 }

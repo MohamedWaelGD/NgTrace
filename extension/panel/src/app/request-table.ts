@@ -67,7 +67,7 @@ import { InspectorStore } from './inspector.store';
     tr.selected td { background: var(--selected); }
     tr.s-4xx td.status, tr.s-5xx td.status, tr.s-failed td { color: var(--error); }
     tr.pending td { color: var(--muted); }
-    .waste { background: var(--warn-bg, #fff3cd); color: var(--warn, #7a5c00); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
+    .waste { background: color-mix(in srgb, var(--warn) 28%, var(--bg)); color: var(--fg); border: 1px solid color-mix(in srgb, var(--warn) 60%, transparent); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
     .mocked-badge { background: var(--tag); color: var(--bg); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
     .replay-badge { background: var(--badge); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
     td.owner { color: var(--tag); font-family: var(--mono); }

@@ -16,6 +16,8 @@ async function captureClipboard(panel: Page): Promise<() => Promise<string[]>> {
   return () => panel.evaluate(() => (window as unknown as { __copied: string[] }).__copied);
 }
 
+const PRETTY = JSON.stringify({ productId: 2, qty: 1 }, null, 2);
+
 test.describe('replay and edit-and-resend', () => {
   test('replays a GET unchanged without asking, listing it directly under the original', async ({ openInspector }) => {
     const { panel } = await openInspector('/');
@@ -91,5 +93,61 @@ test.describe('replay and edit-and-resend', () => {
     await panel.getByTestId('edit-resend-button').click();
     await panel.getByTestId('replay-body').fill('{"qty":1}');
     await expect(panel.getByTestId('replay-send')).toBeEnabled();
+  });
+
+  test('Replay stays usable while the editor is open and asks for confirmation straight away', async ({ openInspector }) => {
+    const { app, panel } = await openInspector('/');
+    await app.click('#add-to-cart');
+    await selectRequest(panel, 'cart');
+    await panel.getByTestId('tab-replay').click();
+    await panel.getByTestId('edit-resend-button').click();
+    await expect(panel.getByTestId('replay-button')).toBeEnabled();
+    await panel.getByTestId('replay-button').click();
+    await expect(panel.getByTestId('replay-confirm')).toBeVisible();
+  });
+
+  test('the editor stays open while live updates arrive for the request', async ({ openInspector }) => {
+    const { app, panel } = await openInspector('/');
+    await app.click('#add-to-cart');
+    await selectRequest(panel, 'cart');
+    await panel.getByTestId('tab-replay').click();
+    await panel.getByTestId('edit-resend-button').click();
+    // Another request arriving updates the store; the open editor must not reset.
+    await app.click('#add-to-cart');
+    await expect(rows(panel).filter({ hasText: 'cart' })).toHaveCount(2);
+    await expect(panel.getByTestId('replay-editor')).toBeVisible();
+  });
+
+  test('query parameters are editable rows, like headers', async ({ openInspector }) => {
+    const { panel } = await openInspector('/');
+    await expect(rows(panel).filter({ hasText: 'products?page=1' })).toHaveCount(1);
+    await selectRequest(panel, 'products\\?page=1');
+    await panel.getByTestId('tab-replay').click();
+    await panel.getByTestId('edit-resend-button').click();
+    await expect(panel.getByTestId('replay-url')).toHaveValue(/\/api\/products$/);
+    await expect(panel.getByTestId('replay-query-name-0')).toHaveValue('page');
+    await panel.getByTestId('replay-query-value-0').fill('2');
+    await panel.getByTestId('replay-add-query').click();
+    await panel.getByTestId('replay-query-name-1').fill('sort');
+    await panel.getByTestId('replay-query-value-1').fill('asc');
+    await panel.getByTestId('replay-send').click();
+    await expect(rows(panel).filter({ hasText: 'products?page=2&sort=asc' })).toHaveCount(1);
+  });
+
+  test('the body opens formatted and can be minified, re-formatted, and flags invalid JSON', async ({ openInspector }) => {
+    const { app, panel } = await openInspector('/');
+    await app.click('#add-to-cart');
+    await selectRequest(panel, 'cart');
+    await panel.getByTestId('tab-replay').click();
+    await panel.getByTestId('edit-resend-button').click();
+    const body = panel.getByTestId('replay-body');
+    await expect(body).toHaveValue(PRETTY);
+    await panel.getByTestId('replay-minify').click();
+    await expect(body).toHaveValue('{"productId":2,"qty":1}');
+    await panel.getByTestId('replay-format').click();
+    await expect(body).toHaveValue(PRETTY);
+    await body.fill('{"broken":');
+    await panel.getByTestId('replay-format').click();
+    await expect(panel.getByTestId('replay-body-error')).toBeVisible();
   });
 });

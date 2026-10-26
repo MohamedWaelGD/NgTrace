@@ -8,6 +8,7 @@ import {
   DEFAULT_QUICK_COPY_HEADERS,
   detectWaste,
   groupReplays,
+  matchRule,
   type MockRule,
   type ReplaySpec,
   summariseWaste,
@@ -87,6 +88,29 @@ export class InspectorStore {
   readonly mockWarning = signal<string | null>(null);
   private mocksLoaded = false;
   readonly activeMocks = computed(() => this.mockRules().filter((r) => r.enabled).length);
+
+  /** Component classes seen in this panel session (tree or requests), kept across reloads; for autocomplete. */
+  private readonly seenComponents = signal<ReadonlySet<string>>(new Set());
+  readonly knownComponents = computed(() => [...this.seenComponents()].sort((a, b) => a.localeCompare(b)));
+
+  /** How many captured requests each Mock Rule would match, so users can see whether a rule is hitting. */
+  readonly ruleMatches = computed(() => {
+    const requests = this.requests();
+    const counts = new Map<string, number>();
+    for (const rule of this.mockRules()) {
+      const only = [{ ...rule, enabled: true }];
+      counts.set(
+        rule.id,
+        requests.filter((r) => matchRule(only, { method: r.method, url: r.url, className: r.attribution.className })).length,
+      );
+    }
+    return counts;
+  });
+
+  private noteComponents(names: (string | null)[]): void {
+    const fresh = names.filter((n): n is string => !!n && !this.seenComponents().has(n));
+    if (fresh.length) this.seenComponents.update((set) => new Set([...set, ...fresh]));
+  }
   /** Router events for the Timeline markers (same monotonic epoch as request starts). */
   readonly navigation = signal<NavEvent[]>([]);
 
@@ -291,6 +315,7 @@ export class InspectorStore {
         this.status.set(m.status);
         this.pageUrl.set(m.url);
         this.tree.set(m.tree);
+        this.noteComponents(m.tree.map((n) => n.name));
         for (const r of m.requests) this.upsert(r);
         for (const e of m.navigation) this.addNavigation(e);
         break;
@@ -299,6 +324,7 @@ export class InspectorStore {
         break;
       case 'tree':
         this.tree.set(m.tree);
+        this.noteComponents(m.tree.map((n) => n.name));
         break;
       case 'request':
         this.upsert(m.request);
@@ -382,6 +408,7 @@ export class InspectorStore {
   }
 
   private upsert(r: CapturedRequest): void {
+    this.noteComponents([r.attribution.className]);
     this.requests.update((list) => {
       const i = list.findIndex((x) => x.id === r.id);
       if (i === -1) return [...list, r];

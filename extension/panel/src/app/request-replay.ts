@@ -3,8 +3,11 @@ import {
   bodyText,
   buildReplay,
   diffResponses,
+  formatJson,
+  joinUrl,
   needsConfirmation,
   replayability,
+  splitUrl,
   type CapturedRequest,
   type Header,
   type ReplaySpec,
@@ -19,11 +22,11 @@ import { InspectorStore } from './inspector.store';
     @if (r.replayOf) {
       <div class="muted" data-testid="replay-of">Replay of <span class="mono">{{ r.replayOf }}</span></div>
     }
-    @if (!replayable().ok) {
+    @if (!replayableUnchanged().ok && !editing()) {
       <div class="notice-line" data-testid="replay-blocked">{{ blockedReason() }}</div>
     }
     <div class="actions">
-      <button (click)="replay()" [disabled]="!replayable().ok || editing()" data-testid="replay-button" title="Send the request again, unchanged">Replay</button>
+      <button (click)="replay()" [disabled]="!replayableUnchanged().ok" data-testid="replay-button" title="Send the request again, unchanged">Replay</button>
       <button (click)="startEditing()" [disabled]="editing()" data-testid="edit-resend-button" title="Edit the request, then send it">Edit &amp; resend</button>
     </div>
 
@@ -42,8 +45,17 @@ import { InspectorStore } from './inspector.store';
       <section class="editor" data-testid="replay-editor">
         <div class="row">
           <input class="method" [value]="method()" (input)="method.set($any($event.target).value)" data-testid="replay-method" aria-label="Method" />
-          <input class="url" [value]="url()" (input)="url.set($any($event.target).value)" data-testid="replay-url" aria-label="URL" />
+          <input class="url" [value]="url()" (input)="url.set($any($event.target).value)" data-testid="replay-url" aria-label="URL (without the query string)" />
         </div>
+        <h4>Query</h4>
+        @for (q of query(); track $index) {
+          <div class="row">
+            <input class="hname" [value]="q[0]" (input)="setQuery($index, 0, $any($event.target).value)" [attr.data-testid]="'replay-query-name-' + $index" aria-label="Query parameter name" />
+            <input class="hvalue" [value]="q[1]" (input)="setQuery($index, 1, $any($event.target).value)" [attr.data-testid]="'replay-query-value-' + $index" aria-label="Query parameter value" />
+            <button (click)="removeQuery($index)" title="Remove parameter" aria-label="Remove parameter">×</button>
+          </div>
+        }
+        <button (click)="addQuery()" data-testid="replay-add-query">Add parameter</button>
         <h4>Headers</h4>
         @for (h of headers(); track $index) {
           <div class="row">
@@ -53,8 +65,15 @@ import { InspectorStore } from './inspector.store';
           </div>
         }
         <button (click)="addHeader()" data-testid="replay-add-header">Add header</button>
-        <h4>Body</h4>
-        <textarea [value]="bodyValue()" (input)="bodyEdit.set($any($event.target).value)" rows="6" data-testid="replay-body" aria-label="Body"></textarea>
+        <h4>
+          Body
+          <button (click)="format('pretty')" data-testid="replay-format" title="Pretty-print the body as JSON">Format</button>
+          <button (click)="format('minify')" data-testid="replay-minify" title="Minify the body as JSON">Minify</button>
+        </h4>
+        @if (bodyError()) {
+          <div class="muted" data-testid="replay-body-error">The body is not valid JSON.</div>
+        }
+        <textarea [value]="bodyValue()" (input)="bodyEdit.set($any($event.target).value); bodyError.set(false)" rows="10" data-testid="replay-body" aria-label="Body"></textarea>
         <div class="actions">
           <button (click)="send()" [disabled]="!replayable().ok" data-testid="replay-send">Send</button>
           <button (click)="editing.set(false)">Cancel</button>
@@ -149,6 +168,8 @@ export class RequestReplay {
   protected readonly editing = signal(false);
   protected readonly method = signal('GET');
   protected readonly url = signal('');
+  protected readonly query = signal<Header[]>([]);
+  protected readonly bodyError = signal(false);
   protected readonly headers = signal<Header[]>([]);
   /** null: the body is untouched. */
   protected readonly bodyEdit = signal<string | null>(null);
@@ -178,8 +199,9 @@ export class RequestReplay {
   });
 
   protected readonly replayable = computed(() => replayability(this.request(), this.bodyEdit()));
+  protected readonly replayableUnchanged = computed(() => replayability(this.request(), null));
   protected readonly blockedReason = computed(() => {
-    const r = this.replayable();
+    const r = this.replayableUnchanged();
     return r.ok ? '' : `${r.reason} Edit & resend with a replacement body to replay it.`;
   });
 
@@ -187,24 +209,50 @@ export class RequestReplay {
 
   constructor() {
     // A different request starts with a closed editor and no pending confirmation.
+    const id = computed(() => this.request().id);
     effect(() => {
-      this.request().id;
+      id();
       untracked(() => {
         this.editing.set(false);
         this.pending.set(null);
         this.bodyEdit.set(null);
         this.chosen.set(null);
+        this.bodyError.set(false);
       });
     });
   }
 
   protected startEditing(): void {
     const r = this.request();
+    const { base, query } = splitUrl(r.url);
     this.method.set(r.method);
-    this.url.set(r.url);
+    this.url.set(base);
+    this.query.set(query);
     this.headers.set(this.store.masker().headers(r.requestHeaders));
-    this.bodyEdit.set(null);
+    // JSON bodies open pretty-printed, ready to edit; binary or truncated ones start empty.
+    const text = bodyText(r.requestBody);
+    const pretty = r.requestBody.kind === 'json' && replayability(r, null).ok && text ? formatJson(text, 'pretty') : null;
+    this.bodyEdit.set(pretty);
+    this.bodyError.set(false);
     this.editing.set(true);
+  }
+
+  protected setQuery(index: number, part: 0 | 1, value: string): void {
+    this.query.update((list) => list.map((q, i) => (i === index ? (part === 0 ? [value, q[1]] : [q[0], value]) : q)));
+  }
+
+  protected addQuery(): void {
+    this.query.update((list) => [...list, ['', '']]);
+  }
+
+  protected removeQuery(index: number): void {
+    this.query.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  protected format(mode: 'pretty' | 'minify'): void {
+    const formatted = formatJson(this.bodyValue(), mode);
+    this.bodyError.set(formatted === null);
+    if (formatted !== null) this.bodyEdit.set(formatted);
   }
 
   protected setHeader(index: number, part: 0 | 1, value: string): void {
@@ -232,7 +280,7 @@ export class RequestReplay {
     this.dispatch(
       buildReplay(
         this.request(),
-        { method: this.method(), url: this.url(), headers: this.headers(), body: this.bodyEdit() === null && !body ? null : body },
+        { method: this.method(), url: joinUrl(this.url(), this.query()), headers: this.headers(), body: this.bodyEdit() === null && !body ? null : body },
         this.store.masker(),
       ),
     );

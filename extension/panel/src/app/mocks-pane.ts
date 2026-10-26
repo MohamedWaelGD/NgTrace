@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { ruleError, type Header, type MockAction, type MockRule } from '@ngapi/protocol';
 import { InspectorStore } from './inspector.store';
 
@@ -28,7 +28,27 @@ const METHODS = ['*', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
           </select>
           <input class="pattern" [value]="rule.pattern" placeholder="/api/products/*" (input)="store.updateMockRule(rule.id, { pattern: $any($event.target).value })" data-testid="mock-pattern" aria-label="URL pattern" />
           <label><input type="checkbox" [checked]="rule.regex" (change)="store.updateMockRule(rule.id, { regex: !rule.regex })" /> regex</label>
-          <input class="component" [value]="rule.component ?? ''" placeholder="Owner Component (optional)" (input)="store.updateMockRule(rule.id, { component: $any($event.target).value.trim() || null })" data-testid="mock-component" aria-label="Owner Component" />
+          <span class="ac">
+            <input
+              class="component"
+              [value]="rule.component ?? ''"
+              placeholder="Owner Component (optional)"
+              (input)="store.updateMockRule(rule.id, { component: $any($event.target).value.trim() || null })"
+              (focus)="suggestFor.set(rule.id)"
+              (blur)="suggestFor.set(null)"
+              data-testid="mock-component"
+              aria-label="Owner Component"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            @if (suggestFor() === rule.id && suggestions(rule).length) {
+              <ul class="suggest" data-testid="component-suggestions">
+                @for (s of suggestions(rule); track s) {
+                  <li (mousedown)="$event.preventDefault(); pick(rule, s)">{{ s }}</li>
+                }
+              </ul>
+            }
+          </span>
         </div>
         <div class="line">
           <select [value]="rule.action.kind" (change)="setAction(rule, $any($event.target).value)" data-testid="mock-action" aria-label="Action">
@@ -58,6 +78,9 @@ const METHODS = ['*', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
             <textarea class="headers" rows="3" [value]="headersText(rule)" placeholder="Header: value" (input)="setRespond(rule, { headers: parseHeaders($any($event.target).value) })" data-testid="mock-headers" aria-label="Response headers"></textarea>
           </div>
         }
+        <div class="muted" data-testid="mock-matches">
+          Matches {{ store.ruleMatches().get(rule.id) ?? 0 }} captured request{{ store.ruleMatches().get(rule.id) === 1 ? '' : 's' }}
+        </div>
         @if (error(rule); as message) {
           <div class="error" data-testid="mock-error">{{ message }}</div>
         }
@@ -82,11 +105,28 @@ const METHODS = ['*', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
     input, textarea, select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); font-family: var(--mono); font-size: 12px; }
     .warning { background: var(--notice); border: 1px solid var(--border); padding: 3px 8px; margin: 3px 0; color: var(--warn); }
     .error { color: var(--error); }
+    .ac { position: relative; }
+    .suggest { position: absolute; z-index: 5; left: 0; top: 100%; margin: 0; padding: 0; list-style: none; min-width: 100%; max-height: 160px; overflow: auto; background: var(--bg); border: 1px solid var(--border); font-family: var(--mono); }
+    .suggest li { padding: 2px 8px; cursor: default; white-space: nowrap; }
+    .suggest li:hover { background: var(--hover); }
   `,
 })
 export class MocksPane {
   protected readonly store = inject(InspectorStore);
   protected readonly methods = METHODS;
+  /** The rule whose Owner Component field is focused (its suggestion list is open). */
+  protected readonly suggestFor = signal<string | null>(null);
+
+  /** Known components matching what is typed, each once; the exact current value is not offered again. */
+  protected suggestions(rule: MockRule): string[] {
+    const typed = (rule.component ?? '').toLowerCase();
+    return this.store.knownComponents().filter((n) => n !== rule.component && n.toLowerCase().includes(typed));
+  }
+
+  protected pick(rule: MockRule, name: string): void {
+    this.store.updateMockRule(rule.id, { component: name });
+    this.suggestFor.set(null);
+  }
 
   protected error(rule: MockRule): string | null {
     return ruleError(rule);

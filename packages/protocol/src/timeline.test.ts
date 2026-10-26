@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { makeRequest } from './testing';
-import { colorIndex, fitAll, fitNavigation, panViewport, placeSpan, routePhaseBands, spanOf, visibleRows, zoomViewport } from './timeline';
+import {
+  axisTicks,
+  clampViewport,
+  colorIndex,
+  earliestStart,
+  fitAll,
+  fitNavigation,
+  panViewport,
+  placeSpan,
+  routePhaseBands,
+  spanOf,
+  thumbOf,
+  visibleRows,
+  zoomViewport,
+} from './timeline';
 import type { NavEvent } from './types';
 
 describe('spanOf', () => {
@@ -110,5 +124,46 @@ describe('routePhaseBands', () => {
       { kind: 'cancel', url: '/a', at: 25 },
     ];
     expect(routePhaseBands(events)).toEqual([{ phase: 'resolve', url: '/a', start: 5, end: 25 }]);
+  });
+});
+
+describe('axisTicks', () => {
+  it('places ticks at round offsets from the origin', () => {
+    const ticks = axisTicks({ start: 1_000, end: 2_000 }, 1_000);
+    expect(ticks.map((t) => t.label)).toEqual(['+0 ms', '+200 ms', '+400 ms', '+600 ms', '+800 ms', '+1 s']);
+    expect(ticks.map((t) => t.left)).toEqual([0, 20, 40, 60, 80, 100]);
+  });
+
+  it('slides the labels when the viewport pans, so movement is visible', () => {
+    const ticks = axisTicks({ start: 1_100, end: 2_100 }, 1_000);
+    expect(ticks.map((t) => t.label)).toEqual(['+200 ms', '+400 ms', '+600 ms', '+800 ms', '+1 s']);
+    expect(ticks[0].left).toBeCloseTo(10);
+  });
+
+  it('uses seconds for long ranges', () => {
+    const ticks = axisTicks({ start: 0, end: 60_000 }, 0);
+    expect(ticks.map((t) => t.label)).toEqual(['+0 ms', '+10 s', '+20 s', '+30 s', '+40 s', '+50 s', '+1 min']);
+  });
+});
+
+describe('thumbOf and clampViewport', () => {
+  const total = { start: 0, end: 1_000 };
+
+  it('sizes and places the scrollbar thumb as percentages of the whole range', () => {
+    expect(thumbOf(total, { start: 250, end: 500 })).toEqual({ left: 25, width: 25 });
+    expect(thumbOf(total, total)).toEqual({ left: 0, width: 100 });
+  });
+
+  it('keeps a viewport inside the whole range, preserving its width', () => {
+    expect(clampViewport({ start: -100, end: 200 }, total)).toEqual({ start: 0, end: 300 });
+    expect(clampViewport({ start: 900, end: 1_200 }, total)).toEqual({ start: 700, end: 1_000 });
+    expect(clampViewport({ start: -50, end: 2_000 }, total)).toEqual(total);
+  });
+});
+
+describe('earliestStart', () => {
+  it('is the first request start, or null without requests', () => {
+    expect(earliestStart([makeRequest({ startTime: 500 }), makeRequest({ startTime: 300, startMono: 9_000 })], 0)).toBe(500);
+    expect(earliestStart([], 0)).toBeNull();
   });
 });

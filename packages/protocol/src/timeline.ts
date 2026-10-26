@@ -116,3 +116,56 @@ export function routePhaseBands(events: NavEvent[]): RouteBand[] {
   }
   return bands;
 }
+
+/** Start of the first request, the origin the axis counts from; null without requests. */
+export function earliestStart(requests: CapturedRequest[], now: number): number | null {
+  return requests.length ? Math.min(...requests.map((r) => spanOf(r, now).start)) : null;
+}
+
+function niceStep(raw: number): number {
+  const pow = 10 ** Math.floor(Math.log10(Math.max(raw, 1e-9)));
+  return [1, 2, 5, 10].map((m) => m * pow).find((s) => s >= raw) ?? 10 * pow;
+}
+
+function formatOffset(ms: number): string {
+  const sign = ms < 0 ? '-' : '+';
+  const abs = Math.abs(ms);
+  if (abs < 1000) return `${sign}${Math.round(abs)} ms`;
+  if (abs < 60_000) return `${sign}${Number((abs / 1000).toFixed(2))} s`;
+  const minutes = Math.floor(abs / 60_000);
+  const seconds = Math.round((abs % 60_000) / 1000);
+  return seconds ? `${sign}${minutes} min ${seconds} s` : `${sign}${minutes} min`;
+}
+
+/**
+ * Axis ticks at round offsets from `origin` (the first request), so labels slide as the viewport pans
+ * instead of always starting at +0.
+ */
+export function axisTicks(vp: Viewport, origin: number, target = 6): { left: number; label: string }[] {
+  const width = vp.end - vp.start;
+  if (width <= 0) return [];
+  const step = niceStep(width / target);
+  const ticks: { left: number; label: string }[] = [];
+  for (let k = Math.ceil((vp.start - origin) / step); origin + k * step <= vp.end; k++) {
+    const at = origin + k * step;
+    ticks.push({ left: ((at - vp.start) * 100) / width, label: formatOffset(at - origin) });
+  }
+  return ticks;
+}
+
+/** Scrollbar thumb for a viewport inside the whole range, as percentages. */
+export function thumbOf(total: Viewport, vp: Viewport): { left: number; width: number } {
+  const whole = total.end - total.start;
+  if (whole <= 0) return { left: 0, width: 100 };
+  const width = Math.min(100, Math.max(2, ((vp.end - vp.start) * 100) / whole));
+  const left = Math.min(100 - width, Math.max(0, ((vp.start - total.start) * 100) / whole));
+  return { left, width };
+}
+
+/** Shifts a viewport back inside the whole range, keeping its width. */
+export function clampViewport(vp: Viewport, total: Viewport): Viewport {
+  const width = vp.end - vp.start;
+  if (width >= total.end - total.start) return total;
+  const start = Math.min(total.end - width, Math.max(total.start, vp.start));
+  return { start, end: start + width };
+}

@@ -39,6 +39,22 @@ describe('matchRule: URL patterns', () => {
     expect(matchRule([r], req({ url: 'https://other.example.com/v1/x' }))).toBeNull();
   });
 
+  it('treats a pattern without a leading slash or scheme as a path', () => {
+    expect(matchRule([rule({ pattern: 'api/products/*' })], req())?.id).toBe('r1');
+    expect(matchRule([rule({ pattern: 'api/other/*' })], req())).toBeNull();
+  });
+
+  it('matches host-style patterns without a scheme against the URL minus its scheme', () => {
+    const r = rule({ pattern: 'localhost:4200/api/*' });
+    expect(matchRule([r], req())?.id).toBe('r1');
+    expect(matchRule([r], req({ url: 'http://localhost:9000/api/products/7' }))).toBeNull();
+    expect(matchRule([rule({ pattern: 'api.example.com/v1/*' })], req({ url: 'https://api.example.com/v1/x' }))?.id).toBe('r1');
+  });
+
+  it('lets a pattern starting with * match anywhere in the full URL', () => {
+    expect(matchRule([rule({ pattern: '*/products/*' })], req())?.id).toBe('r1');
+  });
+
   it('treats regex characters in a glob literally', () => {
     expect(matchRule([rule({ pattern: '/api/a.b' })], req({ url: 'http://localhost/api/axb' }))).toBeNull();
     expect(matchRule([rule({ pattern: '/api/a.b' })], req({ url: 'http://localhost/api/a.b' }))?.id).toBe('r1');
