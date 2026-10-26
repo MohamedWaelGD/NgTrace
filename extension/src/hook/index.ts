@@ -93,8 +93,9 @@ function start(): void {
   context.patchAsync(win);
 
   const recorder: Recorder = {
-    start(transport, stack, request) {
-      if (paused) return '';
+    start(transport, stack, request, extra) {
+      // A replay is an explicit user action, so it is recorded even while Recording is paused.
+      if (paused && !extra?.replayOf) return '';
       const id = `${pageId}:${++seq}`;
       const input = {
         stack,
@@ -122,8 +123,9 @@ function start(): void {
         endTime: null,
         attribution,
         enrichment: null,
+        ...extra,
       };
-      if (needsRetry(record)) pending.set(id, input);
+      if (!extra?.attribution && needsRetry(record)) pending.set(id, input);
       requests.set(id, record);
       order.push(id);
       while (order.length > RING_BUFFER_SIZE) {
@@ -141,7 +143,7 @@ function start(): void {
       post({ type: 'request', pageId, request: record });
     },
   };
-  installCapture(win, recorder);
+  const capture = installCapture(win, recorder);
 
   const reattribute = () => {
     for (const [id, input] of pending) {
@@ -222,6 +224,12 @@ function start(): void {
         tree = [];
         scan();
         break;
+      case 'replay': {
+        // The replay keeps the original's attribution: it groups under the same component, but is not a new call by it.
+        const original = requests.get(command.spec.replayOf);
+        capture.replay(command.spec, original ? { attribution: structuredClone(original.attribution) } : undefined);
+        break;
+      }
       case 'pause':
         paused = command.paused;
         live.paused = paused;

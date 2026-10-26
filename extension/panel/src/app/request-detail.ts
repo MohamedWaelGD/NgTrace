@@ -7,12 +7,13 @@ import { ICONS } from './icons';
 import { formatBytes, formatDuration, statusLabel, typeLabel } from './format';
 import { InspectorStore } from './inspector.store';
 import { JsonTree } from './json-tree';
+import { RequestReplay } from './request-replay';
 
-type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiator';
+type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiator' | 'replay';
 
 @Component({
   selector: 'app-request-detail',
-  imports: [JsonTree, NgTemplateOutlet, HugeiconsIconComponent],
+  imports: [JsonTree, NgTemplateOutlet, HugeiconsIconComponent, RequestReplay],
   template: `
     @if (store.selectedRequest(); as r) {
       <div class="tabs">
@@ -122,6 +123,9 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
               <div class="kv"><span>Network (DevTools)</span><span>{{ r.enrichment!.serverTiming!.toFixed(1) }} ms</span></div>
             }
           }
+          @case ('replay') {
+            <app-request-replay [request]="r" />
+          }
           @case ('initiator') {
             <section data-testid="initiator">
               <div class="kv"><span>Owner Component</span><span class="mono tag">{{ r.attribution.className ?? '—' }}</span></div>
@@ -204,6 +208,7 @@ export class RequestDetail {
     { id: 'preview', label: 'Preview' },
     { id: 'timing', label: 'Timing' },
     { id: 'initiator', label: 'Initiator' },
+    { id: 'replay', label: 'Replay' },
   ];
   protected readonly statusLabel = statusLabel;
   protected readonly typeLabel = typeLabel;

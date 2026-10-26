@@ -76,6 +76,17 @@ export interface NavEvent {
   at: number;
 }
 
+/** A request the panel asks the hook to re-send (Replay / Edit & resend). */
+export interface ReplaySpec {
+  /** Id of the Captured Request this replays. */
+  replayOf: string;
+  method: string;
+  url: string;
+  headers: Header[];
+  /** null: no body. */
+  body: string | null;
+}
+
 export interface TreeNode {
   id: number;
   name: string;
@@ -170,6 +181,7 @@ export type PanelCommand =
   | { type: 'get-details'; id: number }
   | { type: 'expand'; target: ValueTarget; path: string[] }
   | { type: 'clear' }
+  | { type: 'replay'; spec: ReplaySpec }
   | { type: 'pause'; paused: boolean }
   /** Live Values: follow this target and these expanded paths (always includes the root); null stops. */
   | { type: 'live-target'; target: ValueTarget | null; paths: string[][] };

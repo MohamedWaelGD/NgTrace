@@ -1,6 +1,6 @@
 # Response diff
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: none
 
 ## What
@@ -10,3 +10,4 @@ Blocked by: none
 Unit tests: changed, added and removed JSON paths; header changes; text line diff.
 
 ## Comments
+2026-10-26: Implemented (diff.ts, replay.ts, capture.ts replay, request-replay.ts, e2e/replay.spec.ts).

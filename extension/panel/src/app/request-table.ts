@@ -27,6 +27,9 @@ import { InspectorStore } from './inspector.store';
             data-testid="request-row"
           >
             <td class="name" [title]="r.url">
+              @if (r.replayOf) {
+                <span class="replay-badge" data-testid="replay-badge" title="Re-sent from the panel">Replay</span>
+              }
               @for (w of store.waste().get(r.id) ?? []; track w.kind) {
                 <span class="waste" data-testid="waste-badge" [title]="wasteTitle(w.kind)">{{ wasteLabel(w) }}</span>
               }
@@ -62,6 +65,7 @@ import { InspectorStore } from './inspector.store';
     tr.s-4xx td.status, tr.s-5xx td.status, tr.s-failed td { color: var(--error); }
     tr.pending td { color: var(--muted); }
     .waste { background: var(--warn-bg, #fff3cd); color: var(--warn, #7a5c00); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
+    .replay-badge { background: var(--badge); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
     td.owner { color: var(--tag); font-family: var(--mono); }
     td.owner.weak { opacity: 0.8; }
     tr.empty td { color: var(--muted); text-align: center; padding: 16px; }

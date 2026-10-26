@@ -6,3 +6,5 @@ export * from './live';
 export * from './quick-copy';
 export * from './waste';
 export * from './timeline';
+export * from './diff';
+export * from './replay';

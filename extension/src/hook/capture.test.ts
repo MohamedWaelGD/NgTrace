@@ -8,9 +8,9 @@ function recorder() {
   const records = new Map<string, Rec>();
   let n = 0;
   const rec: Recorder = {
-    start(transport, stack, request) {
+    start(transport, stack, request, extra) {
       const id = String(++n);
-      records.set(id, { transport, stack, data: { ...request } });
+      records.set(id, { transport, stack, data: { ...request, ...extra } });
       return id;
     },
     update(id, patch) {
@@ -27,6 +27,53 @@ function fetchTarget(impl: typeof fetch) {
   const XHR = class extends FakeXHR {};
   return { fetch: impl, XMLHttpRequest: XHR as unknown as typeof XMLHttpRequest, location: { href: 'http://localhost:4200/products/1' } };
 }
+
+describe('replay', () => {
+  it('sends through the native fetch, not the patched one, and records a request linked to the original', async () => {
+    const { rec, records, last } = recorder();
+    const native = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      new Response('{"ok":1}', { status: 201, headers: { 'content-type': 'application/json' } }),
+    );
+    const target = fetchTarget(native as unknown as typeof fetch);
+    const capture = installCapture(target, rec);
+
+    capture.replay({
+      replayOf: 'p:1',
+      method: 'POST',
+      url: 'http://localhost:4200/api/cart',
+      headers: [['Authorization', 'Bearer raw'], ['Content-Type', 'application/json']],
+      body: '{"qty":2}',
+    });
+    await flush();
+
+    expect(native).toHaveBeenCalledTimes(1);
+    const [url, init] = native.mock.calls[0];
+    expect(url).toBe('http://localhost:4200/api/cart');
+    expect(init?.method).toBe('POST');
+    expect(new Headers(init?.headers).get('authorization')).toBe('Bearer raw');
+    expect(init?.body).toBe('{"qty":2}');
+    expect(records.size).toBe(1);
+    expect(last().data).toMatchObject({
+      replayOf: 'p:1',
+      method: 'POST',
+      url: 'http://localhost:4200/api/cart',
+      requestHeaders: [['Authorization', 'Bearer raw'], ['Content-Type', 'application/json']],
+      requestBody: { kind: 'json', text: '{"qty":2}' },
+      status: 201,
+      responseBody: { kind: 'json', text: '{"ok":1}' },
+    });
+  });
+
+  it('records a network failure on the replay', async () => {
+    const { rec, last } = recorder();
+    const target = fetchTarget(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    installCapture(target, rec).replay({ replayOf: 'p:1', method: 'GET', url: 'http://localhost:4200/x', headers: [], body: null });
+    await flush();
+    expect(last().data).toMatchObject({ replayOf: 'p:1', status: null, error: 'TypeError: Failed to fetch' });
+  });
+});
 
 describe('fetch capture', () => {
   it('records the request with absolute URL and the response, leaving the response readable', async () => {

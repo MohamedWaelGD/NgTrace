@@ -1,11 +1,12 @@
-import type { Body, CapturedRequest, Header } from '@ngapi/protocol';
+import type { Body, CapturedRequest, Header, ReplaySpec } from '@ngapi/protocol';
 import { isTextualMime, mimeOf, readCapped, requestBody, textBody } from './body';
 
 export type RequestPart = Pick<CapturedRequest, 'method' | 'url' | 'requestHeaders' | 'requestBody'>;
 
 /** Receives raw captures; the hook turns them into Captured Requests (with attribution). */
 export interface Recorder {
-  start(transport: 'fetch' | 'xhr', stack: string, request: RequestPart): string;
+  /** `extra` is merged into the record (a Replayed Request sets `replayOf` and keeps the original's attribution). */
+  start(transport: 'fetch' | 'xhr', stack: string, request: RequestPart, extra?: Partial<CapturedRequest>): string;
   update(id: string, patch: Partial<CapturedRequest>): void;
 }
 
@@ -42,18 +43,45 @@ const headerList = (headers: Headers): Header[] => [...headers];
 const errorText = (e: unknown) => (e instanceof Error ? `${e.name}: ${e.message}` : String(e));
 
 /** Patches `fetch` and `XMLHttpRequest` on the target so every request is reported to the recorder. */
-export function installCapture(target: CaptureTarget, recorder: Recorder): void {
+export interface Capture {
+  /** Re-sends a request through the native fetch (ADR 7), bypassing Angular, and records it as a Replayed Request. */
+  replay(spec: ReplaySpec, extra?: Partial<CapturedRequest>): void;
+}
+
+export function installCapture(target: CaptureTarget, recorder: Recorder): Capture {
   const safe = guarded(recorder);
+  const native = target.fetch;
   patchFetch(target, safe);
   patchXhr(target, safe);
+  return { replay: (spec, extra) => replay(target, native, safe, spec, extra) };
+}
+
+function replay(target: CaptureTarget, native: typeof fetch, recorder: Recorder, spec: ReplaySpec, extra?: Partial<CapturedRequest>): void {
+  const headers = new Headers();
+  for (const [name, value] of spec.headers) headers.append(name, value);
+  const init: RequestInit = { method: spec.method, headers };
+  if (spec.body !== null) init.body = spec.body;
+  const url = absolute(spec.url, target.location.href);
+  const id = recorder.start(
+    'fetch',
+    captureStack(),
+    { method: spec.method, url, requestHeaders: spec.headers, requestBody: requestBody(init.body) },
+    { ...extra, replayOf: spec.replayOf },
+  );
+  native.call(target, url, init).then(
+    (res) => {
+      if (id) attempt(() => recordFetchResponse(id, res, recorder), undefined);
+    },
+    (err: unknown) => recorder.update(id, { status: null, error: errorText(err), endTime: Date.now() }),
+  );
 }
 
 /** Recording must never break the app's own request: failures are swallowed, '' means "not recorded". */
 function guarded(recorder: Recorder): Recorder {
   return {
-    start(transport, stack, request) {
+    start(transport, stack, request, extra) {
       try {
-        return recorder.start(transport, stack, request);
+        return recorder.start(transport, stack, request, extra);
       } catch {
         return '';
       }

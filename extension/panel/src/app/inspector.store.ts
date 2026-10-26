@@ -6,6 +6,8 @@ import {
   DEFAULT_DUPLICATE_WINDOW_MS,
   DEFAULT_QUICK_COPY_HEADERS,
   detectWaste,
+  groupReplays,
+  type ReplaySpec,
   summariseWaste,
   enrich,
   type AngularStatus,
@@ -72,6 +74,8 @@ export class InspectorStore {
   readonly duplicateWindowMs = signal(DEFAULT_DUPLICATE_WINDOW_MS);
   /** Show only requests flagged with a Waste Signal. */
   readonly wasteOnly = signal(false);
+  /** Skip the confirmation before replaying side-effecting requests (this session only, never saved). */
+  readonly skipReplayConfirm = signal(false);
   readonly showWasteSummary = signal(false);
   readonly viewMode = signal<'table' | 'timeline'>('table');
   /** Router events for the Timeline markers (same monotonic epoch as request starts). */
@@ -227,7 +231,7 @@ export class InspectorStore {
     });
     const waste = this.waste();
     const wasteOnly = this.wasteOnly();
-    return this.scopedRequests().filter((r) => filter(r) && (!wasteOnly || waste.has(r.id)));
+    return groupReplays(this.scopedRequests().filter((r) => filter(r) && (!wasteOnly || waste.has(r.id))));
   });
 
   private port: chrome.runtime.Port | null = null;
@@ -436,6 +440,10 @@ export class InspectorStore {
   setPaused(paused: boolean): void {
     this.paused.set(paused);
     this.send({ type: 'pause', paused });
+  }
+
+  replay(spec: ReplaySpec): void {
+    this.send({ type: 'replay', spec });
   }
 
   togglePick(): void {

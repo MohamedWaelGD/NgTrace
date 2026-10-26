@@ -1,6 +1,6 @@
 # Hook replay command
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: none
 
 ## What
@@ -10,3 +10,4 @@ Blocked by: none
 Unit test in the capture.test.ts style; e2e shows a new row linked to the original.
 
 ## Comments
+2026-10-26: Implemented (diff.ts, replay.ts, capture.ts replay, request-replay.ts, e2e/replay.spec.ts).
