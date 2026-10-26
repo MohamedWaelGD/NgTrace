@@ -127,3 +127,16 @@ async function tabOf(context: import('@playwright/test').BrowserContext, extensi
   await helper.close();
   return id;
 }
+
+test.describe('request mocking while Recording is paused', () => {
+  test('rules stay armed and the mocked request is still listed', async ({ openInspector }) => {
+    const { app, panel } = await openInspector('/');
+    await addRule(panel, { pattern: '/api/products', method: 'GET', status: 500, body: '{}' });
+    await panel.getByTestId('record').click();
+    await app.reload();
+    await expect(app.locator('app-product-card')).toHaveCount(0);
+    await expect(row(panel, 'products\\?page=1')).toContainText('Mocked');
+    // Nothing else was recorded while paused.
+    await expect(rows(panel)).toHaveCount(1);
+  });
+});

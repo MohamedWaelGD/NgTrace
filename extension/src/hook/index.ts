@@ -119,10 +119,23 @@ function start(): void {
   context.watchAngular(win);
   context.patchAsync(win);
 
+  /** Requests sent while Recording is paused: tracked for Mock Rules, but not in the buffer. */
+  const unlistedIds = new Set<string>();
+  const list = (record: CapturedRequest) => {
+    order.push(record.id);
+    while (order.length > RING_BUFFER_SIZE) {
+      const evicted = order.shift()!;
+      requests.delete(evicted);
+      pending.delete(evicted);
+    }
+    post({ type: 'request', pageId, request: record });
+  };
+
   const recorder: Recorder = {
     start(transport, stack, request, extra) {
-      // A replay is an explicit user action, so it is recorded even while Recording is paused.
-      if (paused && !extra?.replayOf) return '';
+      // While paused a request is only tracked, unlisted, so Mock Rules can still apply to it (ADR 8);
+      // it joins the buffer if a rule answers it. A replay is an explicit action and is always listed.
+      const unlisted = paused && !extra?.replayOf;
       const id = `${pageId}:${++seq}`;
       const input = {
         stack,
@@ -152,21 +165,29 @@ function start(): void {
         enrichment: null,
         ...extra,
       };
-      if (!extra?.attribution && needsRetry(record)) pending.set(id, input);
       requests.set(id, record);
-      order.push(id);
-      while (order.length > RING_BUFFER_SIZE) {
-        const evicted = order.shift()!;
-        requests.delete(evicted);
-        pending.delete(evicted);
+      if (unlisted) {
+        unlistedIds.add(id);
+        return id;
       }
-      post({ type: 'request', pageId, request: record });
+      if (!extra?.attribution && needsRetry(record)) pending.set(id, input);
+      list(record);
       return id;
     },
     update(id, patch) {
       const record = requests.get(id);
       if (!record) return;
       Object.assign(record, patch);
+      if (unlistedIds.has(id)) {
+        if (record.mocked) {
+          unlistedIds.delete(id);
+          list(record);
+        } else if (patch.endTime !== undefined) {
+          unlistedIds.delete(id);
+          requests.delete(id);
+        }
+        return;
+      }
       post({ type: 'request', pageId, request: record });
     },
   };
