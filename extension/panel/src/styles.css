@@ -18,6 +18,7 @@
   --key: #881391;
   --string: #c41a16;
   --number: #1a1aa6;
+  --flash: #fce8b2;
   --mono: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
   color-scheme: light;
 }
@@ -40,6 +41,7 @@
   --key: #9a7fd5;
   --string: #f28b82;
   --number: #9980ff;
+  --flash: #5c4a14;
   color-scheme: dark;
 }
 html,
@@ -58,14 +60,20 @@ button {
   border-radius: 3px;
   padding: 1px 6px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 button:hover {
   background: var(--hover);
 }
 button.icon {
   border: none;
-  font-size: 14px;
-  padding: 0 4px;
+  padding: 2px 4px;
+}
+hugeicons-icon {
+  display: inline-flex;
+  flex: none;
 }
 input {
   font: inherit;
@@ -91,4 +99,16 @@ label {
 }
 .mono {
   font-family: var(--mono);
+}
+body.resizing {
+  user-select: none;
+}
+/* Live Values: a row whose value just changed. */
+@keyframes flash {
+  from {
+    background: var(--flash);
+  }
+}
+.flash {
+  animation: flash 600ms ease-out;
 }

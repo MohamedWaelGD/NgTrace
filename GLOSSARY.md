@@ -34,3 +34,15 @@ Merging a Captured Request with the matching `chrome.devtools.network` HAR entry
 
 **Instance Id**
 A stable numeric id the page hook assigns to each component instance it has seen, used to link tree nodes and Captured Requests across the page/panel boundary.
+
+**Recording**
+The single on/off state that controls whether the panel takes in new data: Captured Requests and Live Values. While Recording is paused, the panel stays frozen; a manual refresh still reads values once.
+_Avoid_: capture mode, live mode.
+
+**Live Values**
+The selected component's @Inputs and State (or the selected service's state), kept up to date after each change-detection cycle while Recording is on. Changed values flash briefly.
+_Avoid_: realtime data, watch.
+
+**Quick-copy Header**
+A request header named in Settings (default `Authorization`) that gets a one-click copy button, both for the selected Captured Request and for the most recent Captured Request that carries it. Always copies the raw value, even when the header is masked on screen.
+_Avoid_: token copy, auth copy.

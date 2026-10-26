@@ -1,13 +1,15 @@
-import { DEFAULT_MASKED_HEADERS } from '@ngapi/protocol';
+import { DEFAULT_MASKED_HEADERS, DEFAULT_QUICK_COPY_HEADERS } from '@ngapi/protocol';
 
 export interface Settings {
   /** Origin match patterns beyond localhost, e.g. `https://staging.example.com/*`. */
   extraOrigins: string[];
-  /** Header names masked in UI, copy and export. */
+  /** Header names masked on screen, in cURL / fetch copies and in HAR export (not in header copy, ADR 6). */
   maskedHeaders: string[];
+  /** Request headers with one-click copy buttons (Quick-copy Headers). */
+  quickCopyHeaders: string[];
 }
 
-export const DEFAULT_SETTINGS: Settings = { extraOrigins: [], maskedHeaders: DEFAULT_MASKED_HEADERS };
+export const DEFAULT_SETTINGS: Settings = { extraOrigins: [], maskedHeaders: DEFAULT_MASKED_HEADERS, quickCopyHeaders: DEFAULT_QUICK_COPY_HEADERS };
 
 export async function loadSettings(): Promise<Settings> {
   const stored = (await chrome.storage.sync.get(DEFAULT_SETTINGS as unknown as Record<string, unknown>)) as Partial<Settings>;

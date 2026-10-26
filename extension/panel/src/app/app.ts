@@ -1,18 +1,26 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FILTER_KEYS, toHar, type HarLikeEntry, type StatusChip, type TypeChip } from '@ngapi/protocol';
+import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { ComponentTree } from './component-tree';
+import { ICONS } from './icons';
 import { InspectorStore } from './inspector.store';
+import { QuickCopyMenu } from './quick-copy-menu';
+import { clamp, PANE_MIN, PaneLayout, Splitter } from './layout';
 import { RequestDetail } from './request-detail';
 import { RequestTable } from './request-table';
 
 @Component({
   selector: 'app-root',
-  imports: [ComponentTree, RequestTable, RequestDetail],
+  imports: [ComponentTree, RequestTable, RequestDetail, HugeiconsIconComponent, Splitter, QuickCopyMenu],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
 export class App implements OnInit {
   protected readonly store = inject(InspectorStore);
+  protected readonly icons = ICONS;
+  protected readonly layout = inject(PaneLayout);
+  /** Pane widths when the current drag started. */
+  private dragFrom = { main: 0, tree: 0, detail: 0 };
   protected readonly typeChips: { id: TypeChip; label: string }[] = [
     { id: 'httpclient', label: 'HttpClient' },
     { id: 'xhr', label: 'Other XHR' },
@@ -61,9 +69,11 @@ export class App implements OnInit {
   }
 
   private async loadSettings(): Promise<void> {
-    const stored = await chrome.storage?.sync.get('maskedHeaders');
-    const names = stored?.['maskedHeaders'];
-    if (Array.isArray(names)) this.store.maskedHeaders.set(names as string[]);
+    const stored = await chrome.storage?.sync.get(['maskedHeaders', 'quickCopyHeaders']);
+    const masked = stored?.['maskedHeaders'];
+    if (Array.isArray(masked)) this.store.maskedHeaders.set(masked as string[]);
+    const quick = stored?.['quickCopyHeaders'];
+    if (Array.isArray(quick)) this.store.quickCopyHeaders.set(quick as string[]);
   }
 
   protected applySuggestion(key: string): void {
@@ -89,6 +99,30 @@ export class App implements OnInit {
     }
   }
 
+  protected readonly columns = computed(() => {
+    const { tree, detail } = this.layout.sizes();
+    const treeCol = `minmax(${PANE_MIN.tree}px, ${tree === null ? '22%' : tree + 'px'})`;
+    const tableCol = `minmax(${PANE_MIN.table}px, 1fr)`;
+    if (!this.store.selectedRequest()) return `${treeCol} auto ${tableCol}`;
+    return `${treeCol} auto ${tableCol} auto minmax(${PANE_MIN.detail}px, ${detail === null ? '45%' : detail + 'px'})`;
+  });
+
+  protected startResize(main: HTMLElement): void {
+    const width = (selector: string) => main.querySelector(selector)?.getBoundingClientRect().width ?? 0;
+    this.dragFrom = { main: main.clientWidth, tree: width('.tree-pane'), detail: width('.detail-pane') };
+  }
+
+  protected resizeTree(main: HTMLElement, dx: number): void {
+    const { main: total, tree, detail } = this.dragFrom;
+    const rest = PANE_MIN.table + (detail ? detail : 0) + splitters(main);
+    this.layout.set('tree', clamp(tree + dx, PANE_MIN.tree, total - rest));
+  }
+
+  protected resizeDetail(main: HTMLElement, dx: number): void {
+    const { main: total, tree, detail } = this.dragFrom;
+    this.layout.set('detail', clamp(detail - dx, PANE_MIN.detail, total - tree - PANE_MIN.table - splitters(main)));
+  }
+
   protected exportHar(unmasked: boolean): void {
     const har = toHar(this.store.visibleRequests(), unmasked ? null : this.store.masker());
     const blob = new Blob([JSON.stringify(har, null, 2)], { type: 'application/json' });
@@ -98,4 +132,9 @@ export class App implements OnInit {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
+}
+
+/** Total width of the splitter handles between the panes. */
+function splitters(main: HTMLElement): number {
+  return [...main.querySelectorAll<HTMLElement>('.splitter')].reduce((sum, el) => sum + el.offsetWidth, 0);
 }

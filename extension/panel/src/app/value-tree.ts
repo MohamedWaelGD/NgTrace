@@ -1,16 +1,18 @@
 import { Component, computed, inject, input } from '@angular/core';
 import type { ValueEntry, ValueTarget } from '@ngapi/protocol';
+import { Twisty } from './icons';
 import { InspectorStore, targetKey } from './inspector.store';
 
 /** Read-only, lazily expanded property explorer for component and service state. */
 @Component({
   selector: 'app-value-tree',
+  imports: [Twisty],
   template: `
     @for (entry of entries(); track entry.name) {
       @let childPath = [...path(), entry.name];
       @let open = isOpen(childPath);
-      <div class="row" [style.padding-left.px]="path().length * 12">
-        <span class="twisty" (click)="toggle(entry, childPath, open)">{{ entry.expandable ? (open ? '▾' : '▸') : '' }}</span>
+      <div class="row" [class.flash]="flashing(childPath)" [style.padding-left.px]="path().length * 12">
+        <app-twisty [open]="open" [expandable]="entry.expandable" (click)="toggle(entry, childPath, open)" />
         <span class="key">{{ entry.name }}</span>: <span class="val" [title]="entry.preview">{{ entry.preview }}</span>
       </div>
       @if (open) {
@@ -25,7 +27,6 @@ import { InspectorStore, targetKey } from './inspector.store';
   styles: `
     :host { display: block; font-family: var(--mono); }
     .row { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
-    .twisty { display: inline-block; width: 12px; color: var(--muted); cursor: pointer; }
     .key { color: var(--key); }
     .muted { color: var(--muted); font-family: system-ui, sans-serif; padding: 2px 8px; }
   `,
@@ -37,6 +38,10 @@ export class ValueTree {
   readonly entries = input.required<ValueEntry[]>();
 
   private readonly expansions = computed(() => this.store.expansions());
+
+  protected flashing(path: string[]): boolean {
+    return this.store.flashing().has(targetKey(this.target(), path));
+  }
 
   protected isOpen(path: string[]): boolean {
     return this.expansions().has(targetKey(this.target(), path));

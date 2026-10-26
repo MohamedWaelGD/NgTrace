@@ -3,12 +3,13 @@
     class="icon record"
     [class.on]="!store.paused()"
     [title]="store.paused() ? 'Resume recording' : 'Pause recording'"
+    [attr.aria-label]="store.paused() ? 'Resume recording' : 'Pause recording'"
     (click)="store.setPaused(!store.paused())"
     data-testid="record"
   >
-    ●
+    <hugeicons-icon [icon]="icons.record" [size]="14" />
   </button>
-  <button class="icon" title="Clear" (click)="store.clear()" data-testid="clear">⊘</button>
+  <button class="icon" title="Clear" (click)="store.clear()" data-testid="clear" aria-label="Clear"><hugeicons-icon [icon]="icons.clear" [size]="14" /></button>
   <label><input type="checkbox" [checked]="store.preserveLog()" (change)="store.preserveLog.set(!store.preserveLog())" /> Preserve log</label>
   <span class="sep"></span>
   <label title="Show requests of child components too">
@@ -25,8 +26,9 @@
   </label>
   <span class="spacer"></span>
   <span class="info">{{ devInfo() }}</span>
-  <button (click)="exportHar(false)" title="Export visible requests as HAR (masked)" data-testid="export-har">Export HAR</button>
-  <button (click)="exportHar(true)" title="Export visible requests as HAR without masking">Export unmasked</button>
+  <app-quick-copy-menu />
+  <button (click)="exportHar(false)" title="Export visible requests as HAR (masked)" data-testid="export-har"><hugeicons-icon [icon]="icons.exportHar" [size]="14" /> Export HAR</button>
+  <button (click)="exportHar(true)" title="Export visible requests as HAR without masking"><hugeicons-icon [icon]="icons.unmasked" [size]="14" /> Export unmasked</button>
 </header>
 
 <div class="filterbar">
@@ -72,14 +74,28 @@
   <div class="notice" data-testid="notice">{{ message }}</div>
 }
 
-<main [class.with-detail]="store.selectedRequest()">
+<main #main [style.grid-template-columns]="columns()">
   <aside class="tree-pane">
     <app-component-tree />
   </aside>
+  <div
+    appSplitter
+    (dragStart)="startResize(main)"
+    (drag)="resizeTree(main, $event.dx)"
+    (reset)="layout.set('tree', null)"
+    data-testid="splitter-tree"
+  ></div>
   <section class="table-pane">
     <app-request-table />
   </section>
   @if (store.selectedRequest()) {
+    <div
+      appSplitter
+      (dragStart)="startResize(main)"
+      (drag)="resizeDetail(main, $event.dx)"
+      (reset)="layout.set('detail', null)"
+      data-testid="splitter-detail"
+    ></div>
     <section class="detail-pane">
       <app-request-detail />
     </section>

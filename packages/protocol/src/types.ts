@@ -119,6 +119,20 @@ export interface ComponentDetails {
   diSupported: boolean;
 }
 
+/** Live Values update (ADR 5): only the lists that changed since the last read are present. */
+export interface LiveUpdate {
+  target: ValueTarget;
+  /** Component @Inputs; absent when unchanged or for a service target. */
+  inputs?: InputValue[];
+  /** Expanded value lists that changed, including the root (path []). */
+  lists: { path: string[]; entries: ValueEntry[] }[];
+  /** Changed rows: input names, and value paths (list path + entry name). */
+  changedInputs: string[];
+  changedPaths: string[][];
+  /** True while reads are slow and the interval has backed off. */
+  throttled: boolean;
+}
+
 /** Messages the page hook sends towards the panel. */
 export type HookMessage =
   | { type: 'snapshot'; pageId: string; url: string; status: AngularStatus; tree: TreeNode[]; requests: CapturedRequest[] }
@@ -127,7 +141,8 @@ export type HookMessage =
   | { type: 'request'; pageId: string; request: CapturedRequest }
   | { type: 'details'; pageId: string; details: ComponentDetails }
   | { type: 'expanded'; pageId: string; target: ValueTarget; path: string[]; entries: ValueEntry[] }
-  | { type: 'picked'; pageId: string; id: number };
+  | { type: 'picked'; pageId: string; id: number; element: string }
+  | { type: 'live'; pageId: string; update: LiveUpdate };
 
 /** Messages the panel sends to the page hook. */
 export type PanelCommand =
@@ -137,7 +152,9 @@ export type PanelCommand =
   | { type: 'get-details'; id: number }
   | { type: 'expand'; target: ValueTarget; path: string[] }
   | { type: 'clear' }
-  | { type: 'pause'; paused: boolean };
+  | { type: 'pause'; paused: boolean }
+  /** Live Values: follow this target and these expanded paths (always includes the root); null stops. */
+  | { type: 'live-target'; target: ValueTarget | null; paths: string[][] };
 
 /** window.postMessage envelope between the main-world hook and the content script. */
 export const HOOK_SOURCE = '__ngapi_hook__';

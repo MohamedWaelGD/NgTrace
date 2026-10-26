@@ -53,6 +53,11 @@ export class InstanceRegistry implements ComponentRegistry {
     if (k) k.destroyed = true;
   }
 
+  /** True once the instance is destroyed (Ghost Node) or no longer known. */
+  isDestroyed(id: number): boolean {
+    return this.known.get(id)?.destroyed ?? true;
+  }
+
   forget(id: number): void {
     this.known.delete(id);
   }

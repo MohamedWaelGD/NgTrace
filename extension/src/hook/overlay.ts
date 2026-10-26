@@ -25,7 +25,7 @@ export class Overlay {
   }
 
   /** Starts picking: hovering highlights the owning component, a click reports it. */
-  pick(ownerOf: (el: Element) => number | null, labelOf: (id: number) => string, elementOf: (id: number) => Element | undefined, onPicked: (id: number) => void): void {
+  pick(ownerOf: (el: Element) => number | null, labelOf: (id: number) => string, elementOf: (id: number) => Element | undefined, onPicked: (id: number, element: Element) => void): void {
     this.cancelPick();
     const move = (e: MouseEvent) => {
       const id = ownerOf(e.target as Element);
@@ -37,7 +37,7 @@ export class Overlay {
       e.stopPropagation();
       const id = ownerOf(e.target as Element);
       this.cancelPick();
-      if (id !== null) onPicked(id);
+      if (id !== null) onPicked(id, e.target as Element);
     };
     const key = (e: KeyboardEvent) => {
       if (e.key === 'Escape') this.cancelPick();

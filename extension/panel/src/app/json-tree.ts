@@ -1,11 +1,13 @@
 import { Component, computed, input, signal } from '@angular/core';
+import { Twisty } from './icons';
 
 /** Collapsible JSON viewer for the Preview tab. */
 @Component({
   selector: 'app-json-tree',
+  imports: [Twisty],
   template: `
     @if (isContainer()) {
-      <span class="toggle" (click)="open.set(!open())">{{ open() ? '▾' : '▸' }}</span>
+      <app-twisty [open]="open()" (click)="open.set(!open())" />
       @if (name() !== null) {
         <span class="key">{{ name() }}</span>:
       }
@@ -28,7 +30,6 @@ import { Component, computed, input, signal } from '@angular/core';
   `,
   styles: `
     :host { font-family: var(--mono); font-size: 12px; line-height: 18px; }
-    .toggle { cursor: pointer; display: inline-block; width: 12px; color: var(--muted); }
     .children { padding-left: 14px; }
     .leaf { padding-left: 12px; }
     .key { color: var(--key); }

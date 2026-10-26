@@ -47,9 +47,9 @@ test.describe('services, route resolvers and component state', () => {
     const state = panel.getByTestId('state');
     await expect(state).toContainText('title: "Store detail"');
     await expect(state).not.toContainText('__ngContext__');
-    await state.locator('.row', { hasText: /^▸store:/ }).locator('.twisty').click();
+    await state.locator('.row', { hasText: /^store:/ }).locator('app-twisty').click();
     await expect(state).toContainText('loadedAt: Signal("');
-    await state.locator('.row', { hasText: /^▸product:/ }).locator('.twisty').click();
+    await state.locator('.row', { hasText: /^product:/ }).locator('app-twisty').click();
     await expect(state).toContainText('name: "Scarf"');
   });
 

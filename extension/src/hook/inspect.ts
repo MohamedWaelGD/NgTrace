@@ -43,6 +43,11 @@ export class Inspector {
     return details;
   }
 
+  /** False once the service instance was garbage-collected. */
+  hasService(id: number): boolean {
+    return !!this.services.get(id)?.deref();
+  }
+
   expand(target: ValueTarget, path: string[]): ValueEntry[] {
     let value: unknown = target.kind === 'component' ? this.registry.instance(target.id) : this.services.get(target.id)?.deref();
     for (const key of path) {

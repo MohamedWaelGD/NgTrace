@@ -1,1 +1,1 @@
-chrome.devtools.panels.create('Angular API', '', 'panel/index.html');
+chrome.devtools.panels.create('Angular API', 'icons/icon-32.png', 'panel/index.html');

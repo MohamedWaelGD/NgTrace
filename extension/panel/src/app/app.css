@@ -3,6 +3,16 @@
   grid-template-rows: auto auto auto 1fr auto;
   height: 100vh;
 }
+/* Fixed rows: without the optional notice, main would otherwise land in an auto row. */
+.notice {
+  grid-row: 3;
+}
+main {
+  grid-row: 4;
+}
+.statusbar {
+  grid-row: 5;
+}
 .toolbar,
 .filterbar {
   display: flex;
@@ -78,11 +88,8 @@
 }
 main {
   display: grid;
-  grid-template-columns: minmax(180px, 22%) 1fr;
   min-height: 0;
-}
-main.with-detail {
-  grid-template-columns: minmax(180px, 22%) minmax(240px, 1fr) minmax(320px, 45%);
+  overflow: hidden;
 }
 .tree-pane,
 .table-pane,
@@ -91,9 +98,16 @@ main.with-detail {
   min-width: 0;
   overflow: hidden;
 }
-.tree-pane,
-.table-pane {
-  border-right: 1px solid var(--border);
+.splitter {
+  width: 4px;
+  cursor: col-resize;
+  background: var(--border);
+  background-clip: content-box;
+  padding: 0 1px;
+  touch-action: none;
+}
+.splitter:hover {
+  background-color: var(--accent);
 }
 .statusbar {
   padding: 2px 8px;

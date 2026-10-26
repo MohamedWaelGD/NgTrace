@@ -4,6 +4,7 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const originsList = $<HTMLUListElement>('origins');
 const originInput = $<HTMLInputElement>('origin');
 const headersInput = $<HTMLTextAreaElement>('headers');
+const quickCopyInput = $<HTMLTextAreaElement>('quick-copy-headers');
 const message = $<HTMLParagraphElement>('message');
 
 async function render(): Promise<void> {
@@ -24,6 +25,7 @@ async function render(): Promise<void> {
     }),
   );
   headersInput.value = settings.maskedHeaders.join('\n');
+  quickCopyInput.value = settings.quickCopyHeaders.join('\n');
 }
 
 $<HTMLFormElement>('add-origin').onsubmit = async (e) => {
@@ -46,18 +48,32 @@ $<HTMLFormElement>('add-origin').onsubmit = async (e) => {
   await render();
 };
 
+const headerNames = (text: string) =>
+  text
+    .split(/[\n,]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
 $<HTMLFormElement>('masking').onsubmit = async (e) => {
   e.preventDefault();
-  const names = headersInput.value
-    .split(/[\n,]/)
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
+  const names = headerNames(headersInput.value).map((s) => s.toLowerCase());
   await chrome.storage.sync.set({ maskedHeaders: names });
   message.textContent = 'Saved masked headers.';
 };
 
 $<HTMLButtonElement>('reset-headers').onclick = async () => {
   await chrome.storage.sync.set({ maskedHeaders: DEFAULT_SETTINGS.maskedHeaders });
+  await render();
+};
+
+$<HTMLFormElement>('quick-copy').onsubmit = async (e) => {
+  e.preventDefault();
+  await chrome.storage.sync.set({ quickCopyHeaders: [...new Set(headerNames(quickCopyInput.value))] });
+  message.textContent = 'Saved quick-copy headers.';
+};
+
+$<HTMLButtonElement>('reset-quick-copy').onclick = async () => {
+  await chrome.storage.sync.set({ quickCopyHeaders: DEFAULT_SETTINGS.quickCopyHeaders });
   await render();
 };
 

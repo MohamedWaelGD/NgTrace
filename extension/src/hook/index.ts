@@ -18,6 +18,7 @@ import { attribute, type AttributionInput } from './attribution';
 import { installCapture, type Recorder } from './capture';
 import { OwnerContext } from './context';
 import { Inspector } from './inspect';
+import { LiveValues } from './live';
 import { Overlay } from './overlay';
 import { InstanceRegistry } from './registry';
 import { detectAngular, previewOptions, TreeScanner, type NgGlobals } from './tree';
@@ -39,6 +40,17 @@ function start(): void {
   const overlay = new Overlay(document);
   const internals = new AngularInternals();
   const inspector = new Inspector(registry, scanner, () => win.ng ?? {});
+
+  const live = new LiveValues(
+    {
+      inputs: (id) => scanner.inputs(id, ng()),
+      entries: (target, path) => inspector.expand(target, path),
+      isGone: (target) => (target.kind === 'component' ? registry.isDestroyed(target.id) : !inspector.hasService(target.id)),
+    },
+    (update) => post({ type: 'live', pageId, update }),
+    (fn, ms) => setTimeoutNative(fn, ms),
+  );
+  context.onChangeDetection = () => live.changeDetected();
 
   const order: string[] = [];
   const requests = new Map<string, CapturedRequest>();
@@ -180,7 +192,7 @@ function start(): void {
             (el) => scanner.ownerOf(el),
             label,
             (id) => scanner.element(id),
-            (id) => post({ type: 'picked', pageId, id }),
+            (id, el) => post({ type: 'picked', pageId, id, element: describe(el) }),
           );
         break;
       case 'get-details':
@@ -199,6 +211,10 @@ function start(): void {
         break;
       case 'pause':
         paused = command.paused;
+        live.paused = paused;
+        break;
+      case 'live-target':
+        live.follow(command.target, command.paths);
         break;
     }
   };
@@ -228,6 +244,12 @@ function start(): void {
   };
   post({ type: 'status', pageId, status });
   detect();
+}
+
+/** Short label for a picked element, e.g. `<span.price>`. */
+function describe(el: Element): string {
+  const cls = typeof el.className === 'string' ? el.className.trim().split(/\s+/).filter(Boolean)[0] : '';
+  return `<${el.tagName.toLowerCase()}${el.id ? '#' + el.id : cls ? '.' + cls : ''}>`;
 }
 
 function needsRetry(r: CapturedRequest): boolean {

@@ -22,11 +22,18 @@
       <button>Add origin</button>
     </form>
     <h2>Masked headers</h2>
-    <p>One header name per line. Names matching <code>token|secret|api-key</code> are always masked.</p>
+    <p>One header name per line. Names matching <code>token|secret|api-key</code> are always masked. Masking applies on screen, to Copy as cURL / fetch and to HAR export; copying a single header copies its real value.</p>
     <form id="masking">
       <textarea id="headers"></textarea>
       <button>Save</button>
       <button type="button" id="reset-headers">Reset to defaults</button>
+    </form>
+    <h2>Quick-copy headers</h2>
+    <p>One request header name per line. Each gets a one-click copy button in the request details and in the toolbar (from the latest request that has it).</p>
+    <form id="quick-copy">
+      <textarea id="quick-copy-headers"></textarea>
+      <button>Save</button>
+      <button type="button" id="reset-quick-copy">Reset to defaults</button>
     </form>
     <p id="message"></p>
     <script src="options.js"></script>

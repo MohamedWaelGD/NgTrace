@@ -48,5 +48,5 @@ export function ownerLabel(r: CapturedRequest): string {
   if (a.via === 'route') return `${a.className ?? '?'} (route)`;
   if (a.className) return a.instanceId === null ? `${a.className} (class)` : a.className;
   const by = a.service ?? a.group;
-  return by ? `⟂ ${by}` : '⟂ unattributed';
+  return by ? `via ${by}` : 'unattributed';
 }

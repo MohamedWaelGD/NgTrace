@@ -1,5 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import type { InjectedService, ProviderInfo, ValueTarget } from '@ngapi/protocol';
+import { HugeiconsIconComponent } from '@hugeicons/angular';
+import { ICONS, Twisty } from './icons';
 import { InspectorStore, targetKey } from './inspector.store';
 import { ValueTree } from './value-tree';
 
@@ -8,12 +10,15 @@ type Section = 'inputs' | 'state' | 'services' | 'injectors';
 /** Selected component: @Inputs, State, injected services and the injector path (read-only). */
 @Component({
   selector: 'app-component-details',
-  imports: [ValueTree],
+  imports: [ValueTree, HugeiconsIconComponent, Twisty],
   template: `
     @if (store.selectedService(); as service) {
       <div class="pane-title service-title" data-testid="service-title">
         Service: {{ service.name }}
-        <button class="icon" title="Back to the component" (click)="store.selectService(null)">✕</button>
+        @if (store.liveThrottled() && !store.paused()) {
+          <span class="live-note" data-testid="throttled-note">throttled</span>
+        }
+        <button class="icon" title="Back to the component" (click)="store.selectService(null)" aria-label="Back"><hugeicons-icon [icon]="icons.close" [size]="14" /></button>
       </div>
       <div class="section-body">
         @if (serviceTarget(); as target) {
@@ -24,22 +29,31 @@ type Section = 'inputs' | 'state' | 'services' | 'injectors';
       </div>
     } @else if (store.details(); as d) {
       <div class="pane-title">
-        Details
-        <button class="icon" title="Refresh values" (click)="refresh(d.id)" data-testid="refresh-details">⟳</button>
+        <span class="title">
+          Details
+          @if (store.selectedNode()?.destroyed) {
+            <span class="live-note" data-testid="destroyed-note">destroyed — last known values</span>
+          } @else if (store.paused()) {
+            <span class="live-note">paused</span>
+          } @else if (store.liveThrottled()) {
+            <span class="live-note" title="Reading this component is slow, so values update about once a second" data-testid="throttled-note">throttled</span>
+          }
+        </span>
+        <button class="icon" title="Refresh values" (click)="refresh(d.id)" data-testid="refresh-details" aria-label="Refresh values"><hugeicons-icon [icon]="icons.refresh" [size]="14" /></button>
       </div>
       <div class="scroll">
         @if (d.inputs.length) {
-          <h5 (click)="toggle('inputs')">{{ open().has('inputs') ? '▾' : '▸' }} &#64;Inputs</h5>
+          <h5 (click)="toggle('inputs')"><app-twisty [open]="open().has('inputs')" /> &#64;Inputs</h5>
           @if (open().has('inputs')) {
             <div class="section-body inputs">
               @for (i of d.inputs; track i.name) {
-                <div class="input-row"><span class="key">{{ i.name }}</span>: <span>{{ i.preview }}</span></div>
+                <div class="input-row" [class.flash]="store.flashing().has('input ' + i.name)"><span class="key">{{ i.name }}</span>: <span>{{ i.preview }}</span></div>
               }
             </div>
           }
         }
 
-        <h5 (click)="toggle('state')">{{ open().has('state') ? '▾' : '▸' }} State</h5>
+        <h5 (click)="toggle('state')"><app-twisty [open]="open().has('state')" /> State</h5>
         @if (open().has('state')) {
           <div class="section-body" data-testid="state">
             <app-value-tree [target]="componentTarget(d.id)" [entries]="d.state" />
@@ -48,7 +62,7 @@ type Section = 'inputs' | 'state' | 'services' | 'injectors';
 
         @if (d.diSupported) {
           <h5 (click)="toggle('services')">
-            {{ open().has('services') ? '▾' : '▸' }} Injected services
+            <app-twisty [open]="open().has('services')" /> Injected services
             <label class="fw" (click)="$event.stopPropagation()">
               <input type="checkbox" [checked]="store.showFramework()" (change)="store.showFramework.set(!store.showFramework())" /> framework
             </label>
@@ -69,7 +83,7 @@ type Section = 'inputs' | 'state' | 'services' | 'injectors';
             </div>
           }
 
-          <h5 (click)="toggle('injectors')">{{ open().has('injectors') ? '▾' : '▸' }} Injector path</h5>
+          <h5 (click)="toggle('injectors')"><app-twisty [open]="open().has('injectors')" /> Injector path</h5>
           @if (open().has('injectors')) {
             <div class="section-body" data-testid="injector-path">
               @for (level of d.injectorPath; track $index) {
@@ -104,6 +118,8 @@ type Section = 'inputs' | 'state' | 'services' | 'injectors';
     .section-body { padding: 2px 0 4px 4px; }
     .input-row { font-family: var(--mono); padding: 1px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .key { color: var(--key); }
+    .title { display: flex; align-items: baseline; gap: 8px; }
+    .live-note { font-weight: normal; color: var(--muted); font-size: 11px; }
     .service { display: flex; align-items: center; gap: 6px; padding: 1px 8px; cursor: pointer; white-space: nowrap; }
     .service:hover { background: var(--hover); }
     .service .name { font-family: var(--mono); color: var(--tag); }
@@ -120,6 +136,7 @@ type Section = 'inputs' | 'state' | 'services' | 'injectors';
 })
 export class ComponentDetails {
   protected readonly store = inject(InspectorStore);
+  protected readonly icons = ICONS;
   protected readonly open = signal<ReadonlySet<Section>>(new Set<Section>(['inputs', 'state', 'services']));
 
   protected readonly visibleServices = computed(() => {

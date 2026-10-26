@@ -8,6 +8,8 @@ const LIFECYCLE_HOOK_START = 4;
 const LIFECYCLE_HOOK_END = 5;
 const OUTPUT_START = 6;
 const OUTPUT_END = 7;
+const TEMPLATE_UPDATE_END = 3;
+const CHANGE_DETECTION_END = 13; // Angular 20+; older versions only report per-template updates.
 
 const OWNER_KEY = '__ngapiOwner';
 
@@ -23,6 +25,8 @@ export class OwnerContext {
   /** Called with component instances seen by the profiler, until set back to null. */
   onComponent: ((instance: object) => void) | null = null;
   zonePatched = false;
+  /** Called when a change-detection pass (or, before Angular 20, a template update) ends. */
+  onChangeDetection: (() => void) | null = null;
 
   constructor(private readonly registry: InstanceRegistry) {}
 
@@ -52,6 +56,8 @@ export class OwnerContext {
       );
     } else if (event === LIFECYCLE_HOOK_END || event === OUTPUT_END) {
       this.syncStack.pop();
+    } else if (event === CHANGE_DETECTION_END || event === TEMPLATE_UPDATE_END) {
+      this.onChangeDetection?.();
     }
   };
 
