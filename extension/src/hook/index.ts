@@ -19,6 +19,7 @@ import { installCapture, type Recorder } from './capture';
 import { OwnerContext } from './context';
 import { Inspector } from './inspect';
 import { LiveValues } from './live';
+import { NavLog, navigationEventOf } from './nav-log';
 import { Overlay } from './overlay';
 import { InstanceRegistry } from './registry';
 import { detectAngular, previewOptions, TreeScanner, type NgGlobals } from './tree';
@@ -51,6 +52,15 @@ function start(): void {
     (fn, ms) => setTimeoutNative(fn, ms),
   );
   context.onChangeDetection = () => live.changeDetected();
+
+  const navLog = new NavLog();
+  const monoNow = () => performance.timeOrigin + performance.now();
+  internals.onRouterEvent = (e) => {
+    const event = navigationEventOf(e, monoNow());
+    if (!event) return;
+    navLog.add(event);
+    post({ type: 'navigation', pageId, event });
+  };
 
   const order: string[] = [];
   const requests = new Map<string, CapturedRequest>();
@@ -108,6 +118,7 @@ function start(): void {
         responseBody: { kind: 'none' },
         mime: null,
         startTime: Date.now(),
+        startMono: monoNow(),
         endTime: null,
         attribution,
         enrichment: null,
@@ -179,6 +190,7 @@ function start(): void {
           status,
           tree,
           requests: order.map((id) => requests.get(id)!),
+          navigation: navLog.all(),
         });
         break;
       case 'highlight':
@@ -205,6 +217,7 @@ function start(): void {
         order.length = 0;
         requests.clear();
         pending.clear();
+        navLog.clear();
         scanner.dropGhosts();
         tree = [];
         scan();

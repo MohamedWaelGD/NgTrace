@@ -1,10 +1,19 @@
-import type { CapturedRequest } from './types';
+import type { CapturedRequest, TimingPhase } from './types';
 
 /** The subset of a `chrome.devtools.network` HAR entry that Enrichment needs. */
 export interface HarLikeEntry {
   request: { url: string; method: string; headers: { name: string; value: string }[] };
   startedDateTime: string;
   time: number;
+  /** HAR phase durations in ms; -1 means not available. `ssl` is part of `connect`, so it is not listed separately. */
+  timings?: Partial<Record<'blocked' | 'dns' | 'connect' | 'ssl' | 'send' | 'wait' | 'receive', number>>;
+}
+
+const PHASES = ['blocked', 'dns', 'connect', 'send', 'wait', 'receive'] as const;
+
+function phasesOf(timings: HarLikeEntry['timings']): TimingPhase[] | undefined {
+  if (!timings) return undefined;
+  return PHASES.flatMap((name) => ((timings[name] ?? 0) > 0 ? [{ name, ms: timings[name]! }] : []));
 }
 
 const WINDOW_MS = 2000;
@@ -34,6 +43,7 @@ export function enrich(requests: CapturedRequest[], entry: HarLikeEntry): Captur
     enrichment: {
       requestHeaders: entry.request.headers.map((h) => [h.name, h.value]),
       serverTiming: entry.time,
+      phases: phasesOf(entry.timings),
     },
   };
 }

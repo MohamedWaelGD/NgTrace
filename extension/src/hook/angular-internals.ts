@@ -27,6 +27,8 @@ export class AngularInternals {
   /** Stack captured when the HttpClient observable being subscribed was created. */
   creationStack: string | null = null;
   routePhase: RoutePhase | null = null;
+  /** Receives every router event (for the Timeline); set by the hook. */
+  onRouterEvent: ((event: any) => void) | null = null;
   private routerAttached = false;
   private httpPatched = false;
   private attempts = 0;
@@ -78,6 +80,7 @@ export class AngularInternals {
   private watchRouter(router: any): void {
     this.routerAttached = true;
     router.events.subscribe((e: any) => {
+      this.onRouterEvent?.(e);
       switch (e?.type) {
         case GuardsCheckStart:
           this.routePhase = routePhaseOf(e.state, 'guard');

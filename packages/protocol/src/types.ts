@@ -35,6 +35,12 @@ export type Body =
 
 export type Header = [name: string, value: string];
 
+/** One phase of a request's wire time, from the DevTools HAR entry. */
+export interface TimingPhase {
+  name: 'blocked' | 'dns' | 'connect' | 'send' | 'wait' | 'receive';
+  ms: number;
+}
+
 export interface CapturedRequest {
   /** `${pageId}:${seq}` — unique across reloads. */
   id: string;
@@ -53,12 +59,21 @@ export interface CapturedRequest {
   mime: string | null;
   /** Epoch ms. */
   startTime: number;
+  /** Start as `performance.timeOrigin + performance.now()`: unaffected by wall-clock changes, used by the Timeline. */
+  startMono?: number;
   endTime: number | null;
   attribution: Attribution;
   /** Set on a Replayed Request: the id of the Captured Request it was re-sent from. */
   replayOf?: string;
   /** Browser-level request headers from the DevTools HAR, once Enriched. */
-  enrichment: { requestHeaders: Header[]; serverTiming?: number } | null;
+  enrichment: { requestHeaders: Header[]; serverTiming?: number; phases?: TimingPhase[] } | null;
+}
+
+/** A router event shown as a Timeline marker. `at` uses the same monotonic epoch as `startMono`. */
+export interface NavEvent {
+  kind: 'start' | 'guards-start' | 'guards-end' | 'resolve-start' | 'resolve-end' | 'end' | 'cancel' | 'error';
+  url: string;
+  at: number;
 }
 
 export interface TreeNode {
@@ -137,10 +152,11 @@ export interface LiveUpdate {
 
 /** Messages the page hook sends towards the panel. */
 export type HookMessage =
-  | { type: 'snapshot'; pageId: string; url: string; status: AngularStatus; tree: TreeNode[]; requests: CapturedRequest[] }
+  | { type: 'snapshot'; pageId: string; url: string; status: AngularStatus; tree: TreeNode[]; requests: CapturedRequest[]; navigation: NavEvent[] }
   | { type: 'status'; pageId: string; status: AngularStatus }
   | { type: 'tree'; pageId: string; tree: TreeNode[] }
   | { type: 'request'; pageId: string; request: CapturedRequest }
+  | { type: 'navigation'; pageId: string; event: NavEvent }
   | { type: 'details'; pageId: string; details: ComponentDetails }
   | { type: 'expanded'; pageId: string; target: ValueTarget; path: string[]; entries: ValueEntry[] }
   | { type: 'picked'; pageId: string; id: number; element: string }

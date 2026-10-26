@@ -14,6 +14,7 @@ import {
   type HarLikeEntry,
   type HookMessage,
   type LiveUpdate,
+  type NavEvent,
   type PanelCommand,
   type StatusChip,
   type TreeNode,
@@ -72,6 +73,9 @@ export class InspectorStore {
   /** Show only requests flagged with a Waste Signal. */
   readonly wasteOnly = signal(false);
   readonly showWasteSummary = signal(false);
+  readonly viewMode = signal<'table' | 'timeline'>('table');
+  /** Router events for the Timeline markers (same monotonic epoch as request starts). */
+  readonly navigation = signal<NavEvent[]>([]);
 
   // Selection
   readonly selectedNodeId = signal<number | null>(null);
@@ -261,6 +265,7 @@ export class InspectorStore {
         this.pageUrl.set(m.url);
         this.tree.set(m.tree);
         for (const r of m.requests) this.upsert(r);
+        for (const e of m.navigation) this.addNavigation(e);
         break;
       case 'status':
         this.status.set(m.status);
@@ -270,6 +275,9 @@ export class InspectorStore {
         break;
       case 'request':
         this.upsert(m.request);
+        break;
+      case 'navigation':
+        this.addNavigation(m.event);
         break;
       case 'details':
         if (m.details.id === this.selectedNodeId()) this.details.set(m.details);
@@ -326,6 +334,7 @@ export class InspectorStore {
     this.expansions.set(new Map());
     this.selectedNodeId.set(null);
     if (!this.preserveLog()) {
+      this.navigation.set([]);
       this.requests.set([]);
       this.selectedRequestId.set(null);
     }
@@ -334,6 +343,10 @@ export class InspectorStore {
       // A reloaded page starts a fresh hook that records by default.
       if (this.paused()) this.send({ type: 'pause', paused: true });
     }
+  }
+
+  private addNavigation(e: NavEvent): void {
+    this.navigation.update((list) => (list.some((x) => x.at === e.at && x.kind === e.kind && x.url === e.url) ? list : [...list, e]));
   }
 
   private upsert(r: CapturedRequest): void {
@@ -409,6 +422,7 @@ export class InspectorStore {
   }
 
   clear(): void {
+    this.navigation.set([]);
     this.requests.set([]);
     this.selectedRequestId.set(null);
     this.send({ type: 'clear' });

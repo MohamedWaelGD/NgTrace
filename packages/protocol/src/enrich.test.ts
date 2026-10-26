@@ -18,6 +18,17 @@ describe('enrich', () => {
     expect(result?.enrichment).toEqual({ requestHeaders: [['Cookie', 'sid=1']], serverTiming: 42 });
   });
 
+  it('keeps the HAR timing phases that took time, in order, and skips unavailable (-1) ones', () => {
+    const a = makeRequest({ url: 'http://x/api', startTime: t0 });
+    const entry = { ...har('http://x/api', 'GET', t0), timings: { blocked: 1, dns: -1, connect: 4, ssl: 2, send: 0, wait: 30, receive: 5 } };
+    expect(enrich([a], entry)?.enrichment?.phases).toEqual([
+      { name: 'blocked', ms: 1 },
+      { name: 'connect', ms: 4 },
+      { name: 'wait', ms: 30 },
+      { name: 'receive', ms: 5 },
+    ]);
+  });
+
   it('prefers requests that are not yet enriched', () => {
     const a = makeRequest({ url: 'http://x/api', startTime: t0, enrichment: { requestHeaders: [] } });
     const b = makeRequest({ url: 'http://x/api', startTime: t0 + 500 });

@@ -58,6 +58,9 @@
     <button class="chip" [class.active]="store.types().includes(c.id)" (click)="store.toggleChip(store.types, c.id)">{{ c.label }}</button>
   }
   <span class="sep"></span>
+  <button class="chip" [class.active]="store.viewMode() === 'timeline'" (click)="store.viewMode.set(store.viewMode() === 'timeline' ? 'table' : 'timeline')" data-testid="view-timeline" title="Show requests on a timeline">
+    Timeline
+  </button>
   <button class="chip" [class.active]="store.wasteOnly()" (click)="store.wasteOnly.set(!store.wasteOnly())" data-testid="chip-waste" title="Show only duplicate or cancelled requests">
     Wasteful only
   </button>
@@ -106,7 +109,11 @@
     data-testid="splitter-tree"
   ></div>
   <section class="table-pane">
-    <app-request-table />
+    @if (store.viewMode() === 'timeline') {
+      <app-request-timeline />
+    } @else {
+      <app-request-table />
+    }
   </section>
   @if (store.selectedRequest()) {
     <div

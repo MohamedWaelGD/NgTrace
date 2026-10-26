@@ -5,3 +5,4 @@ export * from './enrich';
 export * from './live';
 export * from './quick-copy';
 export * from './waste';
+export * from './timeline';

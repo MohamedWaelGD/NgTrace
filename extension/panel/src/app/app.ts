@@ -8,10 +8,11 @@ import { QuickCopyMenu } from './quick-copy-menu';
 import { clamp, PANE_MIN, PaneLayout, Splitter } from './layout';
 import { RequestDetail } from './request-detail';
 import { RequestTable } from './request-table';
+import { RequestTimeline } from './request-timeline';
 
 @Component({
   selector: 'app-root',
-  imports: [ComponentTree, RequestTable, RequestDetail, HugeiconsIconComponent, Splitter, QuickCopyMenu],
+  imports: [ComponentTree, RequestTable, RequestTimeline, RequestDetail, HugeiconsIconComponent, Splitter, QuickCopyMenu],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
