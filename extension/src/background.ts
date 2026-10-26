@@ -1,6 +1,5 @@
 /** Service worker: routes hook messages to the panel of the same tab, and panel commands to the tab. */
 import type { PanelCommand, RuntimeMessage } from '@ngapi/protocol';
-import { loadSettings, scriptsFor } from './settings';
 
 const panels = new Map<number, chrome.runtime.Port>();
 
@@ -28,20 +27,9 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
   panels.get(tabId)?.postMessage(message.message);
 });
 
-/** Registers the hook + bridge on the extra origins chosen in options (optional host permissions). */
-async function syncExtraOrigins(): Promise<void> {
-  const { extraOrigins } = await loadSettings();
-  const granted = (await chrome.permissions.getAll()).origins ?? [];
-  const origins = extraOrigins.filter((o) => granted.includes(o));
+/** The manifest now injects on every http(s) page; drop scripts an older version registered per origin, or they would inject twice. */
+chrome.runtime.onInstalled.addListener(async () => {
   const existing = await chrome.scripting.getRegisteredContentScripts();
   if (existing.length) await chrome.scripting.unregisterContentScripts({ ids: existing.map((s) => s.id) });
-  if (origins.length) await chrome.scripting.registerContentScripts(scriptsFor(origins));
-}
-
-chrome.runtime.onInstalled.addListener(() => void syncExtraOrigins());
-chrome.runtime.onStartup.addListener(() => void syncExtraOrigins());
-chrome.storage.onChanged.addListener((changes) => {
-  if (changes['extraOrigins']) void syncExtraOrigins();
+  await chrome.storage.sync.remove('extraOrigins');
 });
-chrome.permissions.onAdded.addListener(() => void syncExtraOrigins());
-chrome.permissions.onRemoved.addListener(() => void syncExtraOrigins());

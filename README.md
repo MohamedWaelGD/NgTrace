@@ -11,7 +11,7 @@ npm install
 npm run build
 ```
 
-Open `chrome://extensions`, enable **Developer mode**, **Load unpacked** → `dist/extension`. Open DevTools on an Angular app served in dev mode (`ng serve`) on `localhost` / `127.0.0.1` / `*.localhost`, then pick the **Angular API** tab. Other origins (a dev or staging host) can be added in the extension's options page.
+Open `chrome://extensions`, enable **Developer mode**, **Load unpacked** → `dist/extension`. Open DevTools on an Angular app served in dev mode (`ng serve`) on any http(s) origin, then pick the **Angular API** tab.
 
 Requires Angular 14+ in dev mode. Production builds are detected and reported; their requests are recorded but cannot be attributed.
 

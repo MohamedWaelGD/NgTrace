@@ -1,9 +1,7 @@
 import { EDITOR_PRESETS, EDITOR_SETTINGS_PREFIX, type EditorId, type EditorSettings } from '@ngapi/protocol';
-import { DEFAULT_SETTINGS, loadSettings, toOriginPattern } from './settings';
+import { DEFAULT_SETTINGS, loadSettings } from './settings';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-const originsList = $<HTMLUListElement>('origins');
-const originInput = $<HTMLInputElement>('origin');
 const headersInput = $<HTMLTextAreaElement>('headers');
 const quickCopyInput = $<HTMLTextAreaElement>('quick-copy-headers');
 const windowInput = $<HTMLInputElement>('duplicate-window');
@@ -17,45 +15,10 @@ const editorNote = $<HTMLParagraphElement>('editor-note');
 
 async function render(): Promise<void> {
   const settings = await loadSettings();
-  originsList.replaceChildren(
-    ...settings.extraOrigins.map((origin) => {
-      const li = document.createElement('li');
-      li.textContent = origin + ' ';
-      const remove = document.createElement('button');
-      remove.textContent = 'Remove';
-      remove.onclick = async () => {
-        await chrome.permissions.remove({ origins: [origin] });
-        await chrome.storage.sync.set({ extraOrigins: settings.extraOrigins.filter((o) => o !== origin) });
-        await render();
-      };
-      li.appendChild(remove);
-      return li;
-    }),
-  );
   headersInput.value = settings.maskedHeaders.join('\n');
   quickCopyInput.value = settings.quickCopyHeaders.join('\n');
   windowInput.value = String(settings.duplicateWindowMs);
 }
-
-$<HTMLFormElement>('add-origin').onsubmit = async (e) => {
-  e.preventDefault();
-  const pattern = toOriginPattern(originInput.value);
-  if (!pattern) {
-    message.textContent = 'Enter a full http(s) URL, e.g. https://staging.example.com';
-    return;
-  }
-  // Must run in the click's user gesture.
-  const granted = await chrome.permissions.request({ origins: [pattern] });
-  if (!granted) {
-    message.textContent = 'Permission was not granted.';
-    return;
-  }
-  const { extraOrigins } = await loadSettings();
-  await chrome.storage.sync.set({ extraOrigins: [...new Set([...extraOrigins, pattern])] });
-  originInput.value = '';
-  message.textContent = `Added ${pattern}. Reload that page to start capturing.`;
-  await render();
-};
 
 const headerNames = (text: string) =>
   text

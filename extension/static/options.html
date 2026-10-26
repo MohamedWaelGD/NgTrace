@@ -15,13 +15,7 @@
   </head>
   <body>
     <h1>Angular API Inspector</h1>
-    <p>The hook runs on <code>localhost</code>, <code>127.0.0.1</code> and <code>*.localhost</code>. Add other dev or staging origins here.</p>
-    <h2>Extra origins</h2>
-    <ul id="origins"></ul>
-    <form id="add-origin">
-      <input id="origin" placeholder="https://staging.example.com" />
-      <button>Add origin</button>
-    </form>
+    <p>The hook runs on every <code>http</code> and <code>https</code> page.</p>
     <h2>Masked headers</h2>
     <p>One header name per line. Names matching <code>token|secret|api-key</code> are always masked. Masking applies on screen, to Copy as cURL / fetch and to HAR export; copying a single header copies its real value.</p>
     <form id="masking">
