@@ -69,3 +69,25 @@ A request that was aborted and then sent again with the same method and URL shor
 
 **Timeline**
 The view that lays Captured Requests on a time axis, one row each, coloured by Owner Component, with navigation and Route Phase markers. An alternative to the request table, sharing its selection and filters.
+
+**Owner Resource**
+The `resource()`, `httpResource()` or `rxResource()` whose loader sent a Captured Request, named after the component field that holds it (or its debug name), e.g. `ProductDetailComponent.product`. The component that holds it stays the Owner Component. `toSignal` is never an owner; it only appears as a step in the Call Chain.
+
+**Retry**
+A later attempt of the same `HttpClient` request, re-sent automatically after the previous attempt failed (an RxJS `retry` in a service or in an interceptor). Each attempt is its own Captured Request with an Attempt Number, linked to the first attempt. Never counted as a Duplicate or other Waste Signal.
+_Avoid_: resend, replay (a Replayed Request is user-initiated).
+
+**Attempt Number**
+The position of a Captured Request in its Retry chain: 1 for the original, 2 for the first Retry, and so on.
+
+**Failed Request**
+A Captured Request that ended in a network-level error or a status of 400 or more. Aborted requests are not failures. Failures answered by a Mock Rule count but stay marked Mocked. A Retry chain whose last attempt succeeded is "recovered"; its failed attempts still count. Summarised per Owner Component.
+_Avoid_: error request, broken call.
+
+**Interceptor Step**
+One `HttpInterceptor`'s part in one Captured Request: its name, what it changed in the outgoing request (headers, URL, params, method, body), whether it answered without passing the request on (short-circuited), and how many Retries it started.
+_Avoid_: middleware, hook.
+
+**Value History**
+The recent Live Values of the selected component or service, kept from the moment it was selected, with the send times of its Captured Requests marked on it, so the user can scrub back to the values just before a request fired. Cleared when another target is selected.
+_Avoid_: state log, snapshots.
