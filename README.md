@@ -20,9 +20,12 @@ Requires Angular 14+ in dev mode. Production builds are detected and reported; t
 A main-world script injected at `document_start` patches `fetch` and `XMLHttpRequest` and records every request into a page-side ring buffer (1,000 entries), so requests made before DevTools opens are kept. Each request gets an Owner Component, in this order (ADR 2):
 
 1. **context (lifecycle / listener)**: the component whose lifecycle hook or template listener is running, via Angular's dev-mode profiler (`ng.ɵsetProfiler`).
-2. **stack**: a component class found in the stack trace at send time (e.g. a request in a constructor).
-3. **context (async)**: the owner that scheduled the timer, microtask, XHR callback or Zone task the request runs in (debounced search, `setTimeout`, …). Works with and without zone.js.
-4. **none**: Unattributed bucket (`APP_INITIALIZER`, guards, effects, third-party code).
+2. **stack**: a component class in the stack trace, where the request was subscribed or where its `HttpClient` observable was created (a constructor, an `async` pipe).
+3. **context (route)**: requests sent while the router runs guards or resolvers belong to the component that route activates.
+4. **context (async)**: the owner that scheduled the timer, microtask, XHR callback or Zone task the request runs in (debounced search, `setTimeout`, …). Works with and without zone.js.
+5. **none**: Unattributed bucket (`APP_INITIALIZER`, effects, polling services, third-party code).
+
+Every request also gets an **Owner Service** (the service that called `HttpClient`). Selecting a component shows its read-only **State** (signals unwrapped), the **services it injects** and where each came from (`Route: stores/:id`, `root`, a parent component), and its **injector path**. With *Include injected services* on, requests that no component started but that a service it injects made (a store loading itself, a polling service) appear on that component. Clicking a service shows its state and all its requests. These need Angular's DI debug APIs (verified on v22); on older versions the section is hidden.
 
 The Initiator tab shows the confidence and the Call Chain behind every decision.
 

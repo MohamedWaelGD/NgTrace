@@ -12,11 +12,23 @@ export interface ComponentRegistry {
   liveIds(className: string): number[];
 }
 
+/** The router is running guards or resolvers for this route when the request is sent. */
+export interface RoutePhase {
+  /** Route config path(s) of the target leaf, e.g. `stores/:id`. */
+  path: string;
+  phase: 'guard' | 'resolve';
+  /** The component the route will activate, when known. */
+  componentClass: string | null;
+}
+
 export interface AttributionInput {
   /** `new Error().stack` captured when the request was sent. */
   stack: string;
+  /** Stack captured when the HttpClient observable was created (it may be subscribed much later). */
+  creationStack?: string | null;
   syncOwner: OwnerRef | null;
   asyncOwner: OwnerRef | null;
+  route?: RoutePhase | null;
   transport: 'fetch' | 'xhr';
   registry: ComponentRegistry;
 }
@@ -55,7 +67,11 @@ const FRAMEWORK_CLASSES = new Set([
   'DomRendererFactory2', 'DefaultDomRenderer2', 'EmulatedEncapsulationDomRenderer2', 'EventManager',
   'DomEventsPlugin', 'KeyEventsPlugin', 'EventManagerPlugin',
 ]);
-const FRAMEWORK_RE = /(Subscriber|Subject|Scheduler|Action|ZoneSpec)$|^ɵ/;
+const FRAMEWORK_RE = /(Subscriber|Subject|Scheduler|Action|ZoneSpec|Observer)$|^ɵ/;
+
+export function isFrameworkClass(name: string): boolean {
+  return FRAMEWORK_CLASSES.has(name) || FRAMEWORK_RE.test(name);
+}
 
 function parseFrames(stack: string): Frame[] {
   const frames: Frame[] = [];
@@ -74,26 +90,25 @@ function classOf(fn: string): string | null {
   const head = name.split('.')[0].replace(/^_+/, '');
   if (!/^[A-Z][\w$]*$/.test(head)) return null;
   if (BUILTINS.has(head) || /^(HTML|SVG)\w*Element$/.test(head)) return null;
-  if (FRAMEWORK_CLASSES.has(head) || FRAMEWORK_RE.test(head)) return null;
+  if (isFrameworkClass(head)) return null;
   return head;
 }
 
 /**
  * Decides the Owner Component of a request. Precedence (ADR 2): sync profiler context →
- * component frame in the stack → async-propagated context → Unattributed.
+ * component frame in the stack → route phase → async-propagated context → Unattributed.
  */
 export function attribute(input: AttributionInput): { attribution: Attribution; httpClient: boolean } {
   const frames = parseFrames(input.stack);
-  const httpClient = frames.some((f) => HTTP_CLIENT_RE.test(f.fn));
+  const creationFrames = input.creationStack ? parseFrames(input.creationStack) : [];
+  const httpClient = creationFrames.length > 0 || frames.some((f) => HTTP_CLIENT_RE.test(f.fn));
   const transport = httpClient ? 'HttpClient' : input.transport === 'fetch' ? 'fetch' : 'XMLHttpRequest';
 
-  // App classes, outermost (caller) first.
-  const appClasses: string[] = [];
-  for (const f of frames) {
-    if (VENDOR_URL_RE.test(f.url)) continue;
-    const cls = classOf(f.fn);
-    if (cls && appClasses[0] !== cls) appClasses.unshift(cls);
-  }
+  // App classes, outermost (caller) first. Where the observable was created explains the call best;
+  // the subscribe site only adds the consumer.
+  const sendClasses = appClassesOf(frames);
+  const creationClasses = appClassesOf(creationFrames);
+  const appClasses = creationClasses.length ? creationClasses : sendClasses;
 
   const chainFor = (owner: string | null) => {
     const chain = owner && appClasses[0] !== owner ? [owner, ...appClasses] : [...appClasses];
@@ -101,12 +116,18 @@ export function attribute(input: AttributionInput): { attribution: Attribution; 
   };
 
   const { syncOwner, asyncOwner, registry } = input;
+  const isComponent = (c: string) => registry.liveIds(c).length > 0 || c.endsWith('Component');
+  const owners = new Set([syncOwner?.className, asyncOwner?.className, input.route?.componentClass]);
+  const service = [...appClasses].reverse().find((c) => !isComponent(c) && !owners.has(c)) ?? null;
+  const base = { route: null, service, group: null };
+
   if (syncOwner) {
-    return { httpClient, attribution: fromOwner(syncOwner, 'context', syncOwner.via, chainFor(syncOwner.className)) };
+    return { httpClient, attribution: fromOwner(syncOwner, syncOwner.via, chainFor(syncOwner.className), base) };
   }
 
-  // Innermost component frame wins: it is the component whose code made the call.
-  const component = [...appClasses].reverse().find((c) => registry.liveIds(c).length > 0);
+  // Innermost component frame wins: the subscriber first, then the component that created the observable.
+  const isLive = (c: string) => registry.liveIds(c).length > 0;
+  const component = [...sendClasses].reverse().find(isLive) ?? [...creationClasses].reverse().find(isLive);
   if (component) {
     const ids = registry.liveIds(component);
     const instanceId =
@@ -117,17 +138,36 @@ export function attribute(input: AttributionInput): { attribution: Attribution; 
           : null;
     return {
       httpClient,
-      attribution: { instanceId, className: component, confidence: 'stack', via: 'stack', callChain: chainFor(null), group: null },
+      attribution: { ...base, instanceId, className: component, confidence: 'stack', via: 'stack', callChain: chainFor(null) },
+    };
+  }
+
+  // Guards/resolvers: the async context is usually the click that started the navigation, so the route wins.
+  const route = input.route;
+  if (route) {
+    const ids = route.componentClass ? registry.liveIds(route.componentClass) : [];
+    return {
+      httpClient,
+      attribution: {
+        ...base,
+        instanceId: ids.length === 1 ? ids[0] : null,
+        className: route.componentClass,
+        confidence: 'context',
+        via: 'route',
+        route: `${route.path} (${route.phase})`,
+        callChain: dedupeAdjacent([`Route ${route.path}`, ...appClasses, transport]),
+      },
     };
   }
 
   if (asyncOwner) {
-    return { httpClient, attribution: fromOwner(asyncOwner, 'context', 'async', chainFor(asyncOwner.className)) };
+    return { httpClient, attribution: fromOwner(asyncOwner, 'async', chainFor(asyncOwner.className), base) };
   }
 
   return {
     httpClient,
     attribution: {
+      ...base,
       instanceId: null,
       className: null,
       confidence: 'none',
@@ -138,8 +178,23 @@ export function attribute(input: AttributionInput): { attribution: Attribution; 
   };
 }
 
-function fromOwner(owner: OwnerRef, confidence: Attribution['confidence'], via: Attribution['via'], callChain: string[]): Attribution {
-  return { instanceId: owner.id, className: owner.className, confidence, via, callChain, group: null };
+function fromOwner(
+  owner: OwnerRef,
+  via: Attribution['via'],
+  callChain: string[],
+  base: Pick<Attribution, 'route' | 'service' | 'group'>,
+): Attribution {
+  return { ...base, instanceId: owner.id, className: owner.className, confidence: 'context', via, callChain };
+}
+
+function appClassesOf(frames: Frame[]): string[] {
+  const classes: string[] = [];
+  for (const f of frames) {
+    if (VENDOR_URL_RE.test(f.url)) continue;
+    const cls = classOf(f.fn);
+    if (cls && classes[0] !== cls) classes.unshift(cls);
+  }
+  return classes;
 }
 
 function dedupeAdjacent(xs: string[]): string[] {

@@ -19,6 +19,10 @@
     <input type="checkbox" [checked]="store.groupByClass()" (change)="store.groupByClass.set(!store.groupByClass())" data-testid="group-by-class" />
     Group by class
   </label>
+  <label title="Also show requests that no component started, made by services the selected component injects">
+    <input type="checkbox" [checked]="store.includeServices()" (change)="store.includeServices.set(!store.includeServices())" data-testid="include-services" />
+    Include injected services
+  </label>
   <span class="spacer"></span>
   <span class="info">{{ devInfo() }}</span>
   <button (click)="exportHar(false)" title="Export visible requests as HAR (masked)" data-testid="export-har">Export HAR</button>
@@ -84,6 +88,9 @@
 
 <footer class="statusbar">
   {{ store.visibleRequests().length }} / {{ store.requests().length }} requests
+  @if (store.selectedService(); as s) {
+    · requests by <span class="mono">{{ s.name }}</span>
+  }
   @if (store.paused()) {
     · <span class="paused">recording paused</span>
   }

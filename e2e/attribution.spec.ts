@@ -29,7 +29,7 @@ test.describe('attribution scenarios (demo-app)', () => {
     const initiator = await initiatorOf(panel, 'products?page=1');
     expect(initiator).toContain('Owner Component ProductListComponent');
     expect(initiator).toContain('context (lifecycle)');
-    await expect(panel.getByTestId('call-chain')).toHaveText('ProductListComponent → HttpClient');
+    await expect(panel.getByTestId('call-chain')).toHaveText('ProductListComponent → ProductService → HttpClient');
   });
 
   test('each instance of a repeated component owns only its own request', async ({ openInspector }) => {
@@ -88,7 +88,7 @@ test.describe('attribution scenarios (demo-app)', () => {
   test('APP_INITIALIZER request lands in the Unattributed bucket', async ({ openInspector }) => {
     const { panel } = await openInspector();
     await panel.getByTestId('tree-unattributed').click();
-    await expect.poll(() => rowNames(panel)).toEqual(['config']);
+    await expect.poll(() => rowNames(panel)).toEqual(['config', 'notifications']);
     expect(await initiatorOf(panel, 'config')).toContain('Confidence none');
   });
 

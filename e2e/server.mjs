@@ -21,6 +21,7 @@ function api(req, res, url, body) {
   const path = url.pathname;
   let m;
   if (path === '/api/config') return json(res, 200, { theme: 'light' });
+  if (path === '/api/notifications') return json(res, 200, { count: 2 });
   if (path === '/api/banner') return json(res, 200, { message: 'Autumn sale' });
   if (path === '/api/products') return json(res, 200, products, { 'x-total-count': '3' });
   if ((m = /^\/api\/products\/(\d+)$/.exec(path))) return json(res, 200, products.find((p) => p.id === +m[1]) ?? null);

@@ -8,6 +8,15 @@ _Avoid_: call, log entry, network event.
 The nearest Angular component *instance* that caused a Captured Request. Exactly zero or one per request.
 _Avoid_: caller, source component.
 
+**Owner Service**
+The innermost non-component app class in the Call Chain: the service that called `HttpClient` (e.g. `ProductStore`). Set alongside the Owner Component, or alone for requests no component started.
+
+**Route Phase**
+The window between the router's `GuardsCheckStart`/`ResolveStart` and the matching end event. Requests sent in it, with no component in the stack, belong to the route's component (via `route`).
+
+**Creation Stack**
+The stack captured when an `HttpClient` observable is created. Cold observables are often subscribed elsewhere (router, `async` pipe), so the Call Chain is built from where the observable was created.
+
 **Call Chain**
 The ordered list of class/function names between the Owner Component and `HttpClient`/`fetch`/XHR, e.g. `ProductListComponent → ProductService → HttpClient`. Shown as evidence for the attribution.
 

@@ -81,7 +81,14 @@ export interface HarEntry {
   };
   cache: Record<string, never>;
   timings: { send: number; wait: number; receive: number };
-  _angular: { component: string | null; instanceId: number | null; confidence: string; callChain: string[] };
+  _angular: {
+    component: string | null;
+    instanceId: number | null;
+    confidence: string;
+    callChain: string[];
+    service: string | null;
+    route: string | null;
+  };
 }
 
 export interface Har {
@@ -137,6 +144,8 @@ export function toHar(requests: CapturedRequest[], mask: Masker | null): Har {
         instanceId: r.attribution.instanceId,
         confidence: r.attribution.confidence,
         callChain: r.attribution.callChain,
+        service: r.attribution.service,
+        route: r.attribution.route,
       },
     };
     if (postText !== null) {

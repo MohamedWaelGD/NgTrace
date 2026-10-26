@@ -20,6 +20,8 @@ export class OwnerContext {
   private readonly syncStack: (OwnerRef | null)[] = [];
   asyncOwner: OwnerRef | null = null;
   profilerInstalled = false;
+  /** Called with component instances seen by the profiler, until set back to null. */
+  onComponent: ((instance: object) => void) | null = null;
   zonePatched = false;
 
   constructor(private readonly registry: InstanceRegistry) {}
@@ -37,6 +39,7 @@ export class OwnerContext {
   }
 
   readonly profiler = (event: number, instance: unknown): void => {
+    if (this.onComponent && InstanceRegistry.isComponent(instance)) this.onComponent(instance);
     if (event === LIFECYCLE_HOOK_START || event === OUTPUT_START) {
       this.syncStack.push(
         InstanceRegistry.isComponent(instance)

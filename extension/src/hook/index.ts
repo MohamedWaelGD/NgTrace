@@ -13,12 +13,14 @@ import {
   type TreeNode,
   type WindowEnvelope,
 } from '@ngapi/protocol';
+import { AngularInternals } from './angular-internals';
 import { attribute, type AttributionInput } from './attribution';
 import { installCapture, type Recorder } from './capture';
 import { OwnerContext } from './context';
+import { Inspector } from './inspect';
 import { Overlay } from './overlay';
 import { InstanceRegistry } from './registry';
-import { detectAngular, TreeScanner, type NgGlobals } from './tree';
+import { detectAngular, previewOptions, TreeScanner, type NgGlobals } from './tree';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const win = window as any;
@@ -35,6 +37,8 @@ function start(): void {
   const context = new OwnerContext(registry);
   const scanner = new TreeScanner(registry);
   const overlay = new Overlay(document);
+  const internals = new AngularInternals();
+  const inspector = new Inspector(registry, scanner, () => win.ng ?? {});
 
   const order: string[] = [];
   const requests = new Map<string, CapturedRequest>();
@@ -50,7 +54,19 @@ function start(): void {
     window.postMessage(envelope, '*');
   };
   const ng = (): NgGlobals => win.ng ?? {};
+  previewOptions.isSignal = (v) => {
+    try {
+      return !!win.ng?.isSignal?.(v);
+    } catch {
+      return false;
+    }
+  };
 
+  // Find the Router and HttpClient as soon as the first component exists (before the initial navigation).
+  context.onComponent = (instance) => {
+    internals.tryAttach(win.ng, instance);
+    if (internals.done) context.onComponent = null;
+  };
   context.watchAngular(win);
   context.patchAsync(win);
 
@@ -58,7 +74,15 @@ function start(): void {
     start(transport, stack, request) {
       if (paused) return '';
       const id = `${pageId}:${++seq}`;
-      const input = { stack, syncOwner: context.sync(), asyncOwner: context.asyncOwner, transport };
+      const input = {
+        stack,
+        // A cold HttpClient observable: where it was created (service, component), not only where it was subscribed.
+        creationStack: internals.creationStack,
+        syncOwner: context.sync(),
+        asyncOwner: context.asyncOwner,
+        route: internals.routePhase,
+        transport,
+      };
       const { attribution, httpClient } = attribute({ ...input, registry });
       const record: CapturedRequest = {
         id,
@@ -111,6 +135,9 @@ function start(): void {
   const scan = () => {
     if (status.kind !== 'dev') return;
     const next = scanner.scan(document, ng());
+    // Fallback when the profiler is unavailable: attach once the tree has a component.
+    const first = next[0] && registry.instance(next[0].id);
+    if (!internals.done && first) internals.tryAttach(win.ng, first);
     if (JSON.stringify(next) !== JSON.stringify(tree)) {
       tree = next.map((n) => ({ ...n }));
       post({ type: 'tree', pageId, tree });
@@ -156,8 +183,11 @@ function start(): void {
             (id) => post({ type: 'picked', pageId, id }),
           );
         break;
-      case 'get-inputs':
-        post({ type: 'inputs', pageId, id: command.id, inputs: scanner.inputs(command.id, ng()) });
+      case 'get-details':
+        post({ type: 'details', pageId, details: inspector.details(command.id) });
+        break;
+      case 'expand':
+        post({ type: 'expanded', pageId, target: command.target, path: command.path, entries: inspector.expand(command.target, command.path) });
         break;
       case 'clear':
         order.length = 0;
@@ -201,5 +231,6 @@ function start(): void {
 }
 
 function needsRetry(r: CapturedRequest): boolean {
-  return r.attribution.confidence === 'none' || (r.attribution.confidence === 'stack' && r.attribution.instanceId === null);
+  const a = r.attribution;
+  return a.confidence === 'none' || (a.instanceId === null && (a.via === 'stack' || a.via === 'route'));
 }

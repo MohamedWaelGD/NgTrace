@@ -1,0 +1,165 @@
+import { Component, computed, inject, signal } from '@angular/core';
+import type { InjectedService, ProviderInfo, ValueTarget } from '@ngapi/protocol';
+import { InspectorStore, targetKey } from './inspector.store';
+import { ValueTree } from './value-tree';
+
+type Section = 'inputs' | 'state' | 'services' | 'injectors';
+
+/** Selected component: @Inputs, State, injected services and the injector path (read-only). */
+@Component({
+  selector: 'app-component-details',
+  imports: [ValueTree],
+  template: `
+    @if (store.selectedService(); as service) {
+      <div class="pane-title service-title" data-testid="service-title">
+        Service: {{ service.name }}
+        <button class="icon" title="Back to the component" (click)="store.selectService(null)">✕</button>
+      </div>
+      <div class="section-body">
+        @if (serviceTarget(); as target) {
+          <app-value-tree [target]="target" [entries]="serviceEntries()" data-testid="service-state" />
+        } @else {
+          <div class="muted">Instance not created yet — showing its requests only.</div>
+        }
+      </div>
+    } @else if (store.details(); as d) {
+      <div class="pane-title">
+        Details
+        <button class="icon" title="Refresh values" (click)="refresh(d.id)" data-testid="refresh-details">⟳</button>
+      </div>
+      <div class="scroll">
+        @if (d.inputs.length) {
+          <h5 (click)="toggle('inputs')">{{ open().has('inputs') ? '▾' : '▸' }} &#64;Inputs</h5>
+          @if (open().has('inputs')) {
+            <div class="section-body inputs">
+              @for (i of d.inputs; track i.name) {
+                <div class="input-row"><span class="key">{{ i.name }}</span>: <span>{{ i.preview }}</span></div>
+              }
+            </div>
+          }
+        }
+
+        <h5 (click)="toggle('state')">{{ open().has('state') ? '▾' : '▸' }} State</h5>
+        @if (open().has('state')) {
+          <div class="section-body" data-testid="state">
+            <app-value-tree [target]="componentTarget(d.id)" [entries]="d.state" />
+          </div>
+        }
+
+        @if (d.diSupported) {
+          <h5 (click)="toggle('services')">
+            {{ open().has('services') ? '▾' : '▸' }} Injected services
+            <label class="fw" (click)="$event.stopPropagation()">
+              <input type="checkbox" [checked]="store.showFramework()" (change)="store.showFramework.set(!store.showFramework())" /> framework
+            </label>
+          </h5>
+          @if (open().has('services')) {
+            <div class="section-body" data-testid="services">
+              @for (s of visibleServices(); track s.name) {
+                <div class="service" [class.framework]="s.framework" (click)="pick(s)" [attr.data-testid]="'service-' + s.name">
+                  <span class="name">{{ s.name }}</span>
+                  <span class="from">{{ s.from }}</span>
+                  @if (store.serviceCounts().get(s.name); as count) {
+                    <span class="badge">{{ count }}</span>
+                  }
+                </div>
+              } @empty {
+                <div class="muted">No app services injected.</div>
+              }
+            </div>
+          }
+
+          <h5 (click)="toggle('injectors')">{{ open().has('injectors') ? '▾' : '▸' }} Injector path</h5>
+          @if (open().has('injectors')) {
+            <div class="section-body" data-testid="injector-path">
+              @for (level of d.injectorPath; track $index) {
+                <details [open]="$index === 0">
+                  <summary [attr.data-testid]="'injector-' + level.label">{{ level.label }}</summary>
+                  @for (p of visible(level.providers); track p.name) {
+                    <div class="service provider" [class.framework]="p.framework" (click)="pick(p)">
+                      <span class="dot" [class.created]="p.created" [title]="p.created === false ? 'Not created yet' : p.created ? 'Created' : ''"></span>
+                      <span class="name">{{ p.name }}</span>
+                      @if (store.serviceCounts().get(p.name); as count) {
+                        <span class="badge">{{ count }}</span>
+                      }
+                    </div>
+                  } @empty {
+                    <div class="muted">No app providers.</div>
+                  }
+                </details>
+              }
+            </div>
+          }
+        } @else {
+          <div class="muted">Injected services need a newer Angular (dependency-injection debug APIs).</div>
+        }
+      </div>
+    }
+  `,
+  styles: `
+    :host { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+    .scroll { overflow: auto; flex: 1; }
+    h5 { margin: 0; padding: 3px 8px; font-size: 11px; font-weight: 600; cursor: pointer; border-top: 1px solid var(--row-border); display: flex; align-items: center; gap: 6px; }
+    .fw { margin-left: auto; font-weight: normal; color: var(--muted); }
+    .section-body { padding: 2px 0 4px 4px; }
+    .input-row { font-family: var(--mono); padding: 1px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .key { color: var(--key); }
+    .service { display: flex; align-items: center; gap: 6px; padding: 1px 8px; cursor: pointer; white-space: nowrap; }
+    .service:hover { background: var(--hover); }
+    .service .name { font-family: var(--mono); color: var(--tag); }
+    .service.framework .name { color: var(--muted); }
+    .service .from { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+    .badge { margin-left: auto; background: var(--badge); border-radius: 8px; padding: 0 6px; font-size: 10px; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; border: 1px solid var(--muted); flex: none; }
+    .dot.created { background: var(--ok); border-color: var(--ok); }
+    summary { padding: 1px 8px; cursor: pointer; font-family: var(--mono); }
+    .provider { padding-left: 22px; }
+    .muted { color: var(--muted); padding: 2px 8px; }
+    .service-title { color: var(--tag); }
+  `,
+})
+export class ComponentDetails {
+  protected readonly store = inject(InspectorStore);
+  protected readonly open = signal<ReadonlySet<Section>>(new Set<Section>(['inputs', 'state', 'services']));
+
+  protected readonly visibleServices = computed(() => {
+    const services = this.store.details()?.services ?? [];
+    return this.store.showFramework() ? services : services.filter((s) => !s.framework);
+  });
+
+  protected readonly serviceTarget = computed<ValueTarget | null>(() => {
+    const id = this.store.selectedService()?.serviceId;
+    return id == null ? null : { kind: 'service', id };
+  });
+
+  protected readonly serviceEntries = computed(() => {
+    const target = this.serviceTarget();
+    return target ? (this.store.expansions().get(targetKey(target, [])) ?? []) : [];
+  });
+
+  protected componentTarget(id: number): ValueTarget {
+    return { kind: 'component', id };
+  }
+
+  protected visible(providers: ProviderInfo[]): ProviderInfo[] {
+    return this.store.showFramework() ? providers : providers.filter((p) => !p.framework);
+  }
+
+  protected toggle(section: Section): void {
+    this.open.update((set) => {
+      const next = new Set(set);
+      if (next.has(section)) next.delete(section);
+      else next.add(section);
+      return next;
+    });
+  }
+
+  protected pick(s: InjectedService | ProviderInfo): void {
+    this.store.selectService({ name: s.name, serviceId: s.serviceId });
+  }
+
+  protected refresh(id: number): void {
+    this.store.expansions.set(new Map());
+    this.store.send({ type: 'get-details', id });
+  }
+}

@@ -27,6 +27,8 @@ const post = makeRequest({
     via: 'listener',
     callChain: ['CheckoutComponent', 'OrderService', 'HttpClient'],
     group: null,
+    route: null,
+    service: 'OrderService',
   },
 });
 
@@ -105,6 +107,8 @@ describe('HAR export', () => {
       instanceId: 4,
       confidence: 'context',
       callChain: ['CheckoutComponent', 'OrderService', 'HttpClient'],
+      service: 'OrderService',
+      route: null,
     });
   });
 });

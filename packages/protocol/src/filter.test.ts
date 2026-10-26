@@ -12,7 +12,7 @@ const login = makeRequest({
   requestHeaders: [['Authorization', 'Bearer x']],
   mime: 'application/json',
   responseBody: { kind: 'json', text: '{}', size: 2048, truncated: false },
-  attribution: { instanceId: 3, className: 'LoginComponent', confidence: 'stack', via: 'stack', callChain: [], group: null },
+  attribution: { instanceId: 3, className: 'LoginComponent', confidence: 'stack', via: 'stack', callChain: [], group: null, route: null, service: 'AuthService' },
 });
 const failed = makeRequest({ url: 'http://localhost:4200/api/broken', status: null, error: 'net::ERR_FAILED' });
 const all = [products, login, failed];
@@ -57,6 +57,10 @@ describe('request filter', () => {
     expect(run('larger-than:1k')).toEqual([login.url]);
     expect(run('has-request-header:authorization')).toEqual([login.url]);
     expect(run('component:login')).toEqual([login.url]);
+  });
+
+  it('supports service: for the Owner Service', () => {
+    expect(run('service:auth')).toEqual([login.url]);
   });
 
   it('negates property filters too', () => {

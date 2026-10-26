@@ -101,6 +101,11 @@ export class TreeScanner {
   }
 }
 
+/** Angular's own bookkeeping on instances (e.g. `__ngContext__`). */
+export function isInternalKey(key: string): boolean {
+  return key.startsWith('__ng') || key.startsWith('ɵ');
+}
+
 function selectorOf(instance: object, el: Element): string {
   const first = InstanceRegistry.defOf(instance)?.selectors?.[0];
   const tag = Array.isArray(first) && typeof first[0] === 'string' && first[0] ? first[0] : null;
@@ -116,21 +121,32 @@ function safe<T>(fn: () => T): T | undefined {
 }
 
 /** Short, safe, read-only rendering of an input value. */
+/** Set by the hook once Angular is detected; lets previews show signal values. */
+export const previewOptions: { isSignal: (v: unknown) => boolean } = { isSignal: () => false };
+
 export function preview(value: unknown, depth = 0): string {
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
   if (typeof value === 'string') return JSON.stringify(value.length > 80 ? value.slice(0, 80) + '…' : value);
   if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value);
-  if (typeof value === 'function') return `ƒ ${value.name || 'anonymous'}()`;
+  if (typeof value === 'function') {
+    if (previewOptions.isSignal(value)) return `Signal(${depth >= 2 ? '…' : preview((value as () => unknown)(), depth + 1)})`;
+    return `ƒ ${value.name || 'anonymous'}()`;
+  }
   if (typeof value === 'symbol') return value.toString();
   if (value instanceof Date) return value.toISOString();
-  if (depth >= 2) return Array.isArray(value) ? `Array(${value.length})` : '{…}';
+  const ctor = (value as object).constructor;
+  const prefix = ctor && ctor !== Object && !Array.isArray(value) ? `${(ctor.name || '').replace(/^_+/, '')} ` : '';
+  if (value instanceof Map || value instanceof Set) return `${prefix.trim()}(${value.size})`;
+  if (depth >= 2) return Array.isArray(value) ? `Array(${value.length})` : `${prefix}{…}`;
   if (Array.isArray(value)) {
     const items = value.slice(0, 5).map((v) => preview(v, depth + 1));
     return `[${items.join(', ')}${value.length > 5 ? `, … ${value.length - 5} more` : ''}]`;
   }
-  const entries = Object.entries(value as object).slice(0, 6);
+  const entries = Object.entries(value as object)
+    .filter(([k]) => !isInternalKey(k))
+    .slice(0, 6);
   const body = entries.map(([k, v]) => `${k}: ${preview(v, depth + 1)}`).join(', ');
   const more = Object.keys(value as object).length > 6 ? ', …' : '';
-  return `{${body}${more}}`;
+  return `${prefix}{${body}${more}}`;
 }

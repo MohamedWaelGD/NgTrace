@@ -21,7 +21,7 @@ export function makeRequest(overrides: Partial<CapturedRequest> = {}): CapturedR
     mime: null,
     startTime: 1_000,
     endTime: 1_050,
-    attribution: { instanceId: null, className: null, confidence: 'none', via: 'none', callChain: [], group: null },
+    attribution: { instanceId: null, className: null, confidence: 'none', via: 'none', callChain: [], group: null, route: null, service: null },
     enrichment: null,
     ...overrides,
   };

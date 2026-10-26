@@ -7,7 +7,7 @@ async function loadAll(openInspector: (path?: string) => Promise<{ app: Page; pa
   const { app, panel } = await openInspector();
   await app.click('#add-to-cart');
   await app.click('#load-broken');
-  await expect.poll(async () => (await rowNames(panel)).length).toBe(10);
+  await expect.poll(async () => (await rowNames(panel)).length).toBe(11);
   return { app, panel };
 }
 
@@ -44,7 +44,10 @@ test.describe('panel', () => {
   test('include descendants toggles subtree requests', async ({ openInspector }) => {
     const { panel } = await loadAll(openInspector);
     await panel.getByTestId('node-ShopComponent').click();
-    await expect.poll(async () => (await rowNames(panel)).length).toBeGreaterThanOrEqual(9);
+    // Exact list: a length check can pass on the stale "All requests" table before it re-renders.
+    await expect
+      .poll(async () => (await rowNames(panel)).sort())
+      .toEqual(['1', '2', '3', 'cart', 'error', 'legacy?format=xml', 'missing', 'products?page=1']);
     await panel.getByText('Include descendants').click();
     await expect.poll(() => rowNames(panel)).toEqual([]);
   });

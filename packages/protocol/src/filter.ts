@@ -21,6 +21,7 @@ export const FILTER_KEYS = [
   'has-request-header',
   'has-response-header',
   'component',
+  'service',
 ] as const;
 type FilterKey = (typeof FILTER_KEYS)[number];
 
@@ -110,6 +111,8 @@ function compileProperty(key: FilterKey, value: string): Predicate {
       return (r) => r.responseHeaders.some(([n]) => n.toLowerCase() === v);
     case 'component':
       return (r) => (r.attribution.className ?? r.attribution.group ?? '').toLowerCase().includes(v);
+    case 'service':
+      return (r) => (r.attribution.service ?? '').toLowerCase().includes(v);
   }
 }
 

@@ -15,7 +15,11 @@ export interface Attribution {
   className: string | null;
   confidence: Confidence;
   /** How the attribution was made, shown in the Initiator tab. */
-  via: 'lifecycle' | 'listener' | 'async' | 'stack' | 'none';
+  via: 'lifecycle' | 'listener' | 'async' | 'route' | 'stack' | 'none';
+  /** Set when the request was sent while the router ran guards/resolvers, e.g. `stores/:id (resolve)`. */
+  route: string | null;
+  /** Owner Service: the innermost non-component app class in the Call Chain (the service that called HttpClient). */
+  service: string | null;
   /** Outermost-first class names, ending with the transport (HttpClient / fetch / XMLHttpRequest). */
   callChain: string[];
   /** For Unattributed requests: the first app class in the Call Chain (service, effect, guard...). */
@@ -70,13 +74,59 @@ export interface InputValue {
   preview: string;
 }
 
+/** One property in the State / service state explorer. */
+export interface ValueEntry {
+  name: string;
+  preview: string;
+  expandable: boolean;
+}
+
+/** Whose value tree to read: a component instance, or a service instance seen by the hook. */
+export type ValueTarget = { kind: 'component'; id: number } | { kind: 'service'; id: number };
+
+export interface InjectedService {
+  name: string;
+  /** Hook-side id for reading its state; null when the value is not an object. */
+  serviceId: number | null;
+  /** Label of the injector that supplied it, e.g. `Route: stores/:id`, `root`, `<app-shop>`. */
+  from: string;
+  framework: boolean;
+}
+
+export interface ProviderInfo {
+  name: string;
+  /** Set when the instance already exists (never created just to look at it). */
+  serviceId: number | null;
+  /** null when the injector cannot tell. */
+  created: boolean | null;
+  framework: boolean;
+}
+
+export interface InjectorLevel {
+  label: string;
+  kind: 'element' | 'environment' | 'null';
+  providers: ProviderInfo[];
+}
+
+export interface ComponentDetails {
+  id: number;
+  inputs: InputValue[];
+  state: ValueEntry[];
+  /** Empty when the Angular version lacks the DI debug APIs. */
+  services: InjectedService[];
+  injectorPath: InjectorLevel[];
+  /** False when `ng.ɵgetDependenciesFromInjectable` and friends are unavailable (older Angular). */
+  diSupported: boolean;
+}
+
 /** Messages the page hook sends towards the panel. */
 export type HookMessage =
   | { type: 'snapshot'; pageId: string; url: string; status: AngularStatus; tree: TreeNode[]; requests: CapturedRequest[] }
   | { type: 'status'; pageId: string; status: AngularStatus }
   | { type: 'tree'; pageId: string; tree: TreeNode[] }
   | { type: 'request'; pageId: string; request: CapturedRequest }
-  | { type: 'inputs'; pageId: string; id: number; inputs: InputValue[] }
+  | { type: 'details'; pageId: string; details: ComponentDetails }
+  | { type: 'expanded'; pageId: string; target: ValueTarget; path: string[]; entries: ValueEntry[] }
   | { type: 'picked'; pageId: string; id: number };
 
 /** Messages the panel sends to the page hook. */
@@ -84,7 +134,8 @@ export type PanelCommand =
   | { type: 'get-snapshot' }
   | { type: 'highlight'; id: number | null }
   | { type: 'pick'; on: boolean }
-  | { type: 'get-inputs'; id: number }
+  | { type: 'get-details'; id: number }
+  | { type: 'expand'; target: ValueTarget; path: string[] }
   | { type: 'clear' }
   | { type: 'pause'; paused: boolean };
 

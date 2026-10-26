@@ -1,8 +1,10 @@
 import { Component, computed, inject } from '@angular/core';
+import { ComponentDetails } from './component-details';
 import { InspectorStore, UNATTRIBUTED } from './inspector.store';
 
 @Component({
   selector: 'app-component-tree',
+  imports: [ComponentDetails],
   template: `
     <div class="pane-title">
       Components
@@ -57,15 +59,8 @@ import { InspectorStore, UNATTRIBUTED } from './inspector.store';
         ⟂ Unattributed <span class="badge">{{ store.unattributedCount() }}</span>
       </div>
     </div>
-    @if (store.inputs(); as inputs) {
-      @if (inputs.values.length) {
-        <div class="inputs">
-          <div class="pane-title">&#64;Inputs</div>
-          @for (i of inputs.values; track i.name) {
-            <div class="input-row"><span class="key">{{ i.name }}</span>: <span class="val">{{ i.preview }}</span></div>
-          }
-        </div>
-      }
+    @if (store.details() || store.selectedService()) {
+      <app-component-details class="details" />
     }
   `,
   styles: `
@@ -81,9 +76,7 @@ import { InspectorStore, UNATTRIBUTED } from './inspector.store';
     .name { color: var(--tag); font-family: var(--mono); }
     .badge { margin-left: auto; background: var(--badge); color: var(--fg); border-radius: 8px; padding: 0 6px; font-size: 10px; }
     .empty { color: var(--muted); padding: 8px; }
-    .inputs { border-top: 1px solid var(--border); max-height: 35%; overflow: auto; }
-    .input-row { font-family: var(--mono); padding: 1px 8px; white-space: nowrap; }
-    .key { color: var(--key); }
+    .details { border-top: 1px solid var(--border); flex: none; height: 50%; }
     .icon.active { color: var(--accent); }
   `,
 })

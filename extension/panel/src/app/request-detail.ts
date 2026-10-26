@@ -99,6 +99,12 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
               <div class="kv"><span>Owner Component</span><span class="mono tag">{{ r.attribution.className ?? '—' }}</span></div>
               <div class="kv"><span>Instance</span><span>{{ r.attribution.instanceId ?? (r.attribution.className ? 'several live instances' : '—') }}</span></div>
               <div class="kv"><span>Confidence</span><span [class]="'conf-' + r.attribution.confidence">{{ r.attribution.confidence }} ({{ r.attribution.via }})</span></div>
+              @if (r.attribution.service) {
+                <div class="kv"><span>Owner Service</span><span class="mono tag">{{ r.attribution.service }}</span></div>
+              }
+              @if (r.attribution.route) {
+                <div class="kv"><span>Route</span><span class="mono">{{ r.attribution.route }}</span></div>
+              }
               @if (r.attribution.group) {
                 <div class="kv"><span>Unattributed group</span><span class="mono">{{ r.attribution.group }}</span></div>
               }

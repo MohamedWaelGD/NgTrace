@@ -40,6 +40,8 @@ describe('attribute', () => {
       confidence: 'context',
       via: 'listener',
       callChain: ['ProductListComponent', 'ProductService', 'HttpClient'],
+      route: null,
+      service: 'ProductService',
       group: null,
     });
   });
@@ -108,6 +110,8 @@ describe('attribute', () => {
       confidence: 'context',
       via: 'async',
       callChain: ['SearchComponent', 'SearchService', 'HttpClient'],
+      route: null,
+      service: 'SearchService',
       group: null,
     });
   });
@@ -126,6 +130,8 @@ describe('attribute', () => {
       confidence: 'none',
       via: 'none',
       callChain: ['ProductEffects', 'ProductService', 'HttpClient'],
+      route: null,
+      service: 'ProductService',
       group: 'ProductEffects',
     });
   });
@@ -153,6 +159,105 @@ describe('attribute', () => {
     });
     expect(result.httpClient).toBe(true);
     expect(result.attribution.callChain).toEqual(['CheckoutComponent', 'OrderService', 'HttpClient']);
+  });
+
+  it('records the Owner Service: the innermost non-component app class', () => {
+    const result = attribute({
+      stack: httpClientStack(['_NotificationService.poll', APP], [null, APP]),
+      syncOwner: null,
+      asyncOwner: null,
+      transport: 'xhr',
+      registry: registry({}),
+    });
+    expect(result.attribution).toMatchObject({ confidence: 'none', service: 'NotificationService', group: 'NotificationService' });
+
+    const viaComponent = attribute({
+      stack: httpClientStack(['_OrderService.place', APP], ['_CheckoutComponent.submit', APP]),
+      syncOwner: null,
+      asyncOwner: null,
+      transport: 'xhr',
+      registry: registry({ CheckoutComponent: [1] }),
+    });
+    expect(viaComponent.attribution).toMatchObject({ className: 'CheckoutComponent', service: 'OrderService' });
+  });
+
+  describe('creation stack (where a cold HttpClient observable was created)', () => {
+    it('builds the Call Chain from the creation stack, not the subscribe site', () => {
+      const result = attribute({
+        stack: httpClientStack(['ConsumerObserver.next', APP], ['_BannerComponent.ngOnInit', APP], ['App_Template', APP]),
+        creationStack: stack(['_HttpClient.request', HOOK], ['_ProductService.getAll', APP], ['_BannerComponent.ngOnInit', APP]),
+        syncOwner: null,
+        asyncOwner: null,
+        transport: 'xhr',
+        registry: registry({ BannerComponent: [1], App: [2] }),
+      });
+      expect(result.attribution).toMatchObject({
+        className: 'BannerComponent',
+        service: 'ProductService',
+        callChain: ['BannerComponent', 'ProductService', 'HttpClient'],
+      });
+    });
+
+    it('finds the component that created the observable when an async pipe subscribed it', () => {
+      const result = attribute({
+        stack: httpClientStack(['AsyncPipe.transform', VENDOR]),
+        creationStack: stack(['_HttpClient.request', HOOK], ['_OrderService.list', APP], ['new _OrdersComponent', APP]),
+        syncOwner: null,
+        asyncOwner: null,
+        transport: 'xhr',
+        registry: registry({ OrdersComponent: [4] }),
+      });
+      expect(result.attribution).toMatchObject({ instanceId: 4, className: 'OrdersComponent', confidence: 'stack', service: 'OrderService' });
+    });
+  });
+
+  describe('route phase (guards / resolvers)', () => {
+    const route = { path: 'stores/:id', phase: 'resolve' as const, componentClass: 'StoreDetailComponent' };
+
+    it('attributes to the routed component, ahead of the async context of the click that navigated', () => {
+      const result = attribute({
+        stack: httpClientStack(['_ProductStore.load', APP]),
+        syncOwner: null,
+        asyncOwner: { id: 1, className: 'App', via: 'async' },
+        route,
+        transport: 'xhr',
+        registry: registry({ App: [1] }),
+      });
+      expect(result.attribution).toEqual({
+        instanceId: null,
+        className: 'StoreDetailComponent',
+        confidence: 'context',
+        via: 'route',
+        route: 'stores/:id (resolve)',
+        service: 'ProductStore',
+        callChain: ['Route stores/:id', 'ProductStore', 'HttpClient'],
+        group: null,
+      });
+    });
+
+    it('resolves the instance once the routed component is live', () => {
+      const result = attribute({
+        stack: httpClientStack(['_ProductStore.load', APP]),
+        syncOwner: null,
+        asyncOwner: null,
+        route,
+        transport: 'xhr',
+        registry: registry({ StoreDetailComponent: [9] }),
+      });
+      expect(result.attribution).toMatchObject({ instanceId: 9, className: 'StoreDetailComponent', via: 'route' });
+    });
+
+    it('loses to a component frame in the stack', () => {
+      const result = attribute({
+        stack: httpClientStack(['_HeaderComponent.refresh', APP]),
+        syncOwner: null,
+        asyncOwner: null,
+        route,
+        transport: 'xhr',
+        registry: registry({ HeaderComponent: [2] }),
+      });
+      expect(result.attribution).toMatchObject({ className: 'HeaderComponent', via: 'stack', route: null });
+    });
   });
 
   it('does not treat builtins or DOM frames as app classes', () => {
