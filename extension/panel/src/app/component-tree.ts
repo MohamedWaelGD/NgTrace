@@ -4,10 +4,13 @@ import { ComponentDetails } from './component-details';
 import { ICONS, Twisty } from './icons';
 import { clamp, PANE_MIN, PaneLayout, Splitter } from './layout';
 import { InspectorStore, UNATTRIBUTED } from './inspector.store';
+import { SourceActions } from './source-actions';
+import type { TreeNode } from '@ngapi/protocol';
 
 @Component({
   selector: 'app-component-tree',
-  imports: [ComponentDetails, HugeiconsIconComponent, Twisty, Splitter],
+  imports: [ComponentDetails, HugeiconsIconComponent, Twisty, Splitter, SourceActions],
+  host: { '(document:click)': 'menu.set(null)', '(document:keydown.escape)': 'menu.set(null)' },
   template: `
     <div class="pane-title">
       Components
@@ -40,6 +43,7 @@ import { InspectorStore, UNATTRIBUTED } from './inspector.store';
           [class.flash]="flashId() === row.node.id"
           [style.padding-left.px]="8 + row.depth * 14"
           (click)="store.selectNode(row.node.id)"
+          (contextmenu)="openMenu($event, row.node)"
           (mouseenter)="!row.node.destroyed && store.send({ type: 'highlight', id: row.node.id })"
           [attr.data-testid]="'node-' + row.node.name"
           [title]="row.node.destroyed ? 'Destroyed (Ghost Node)' : row.node.selector"
@@ -69,6 +73,12 @@ import { InspectorStore, UNATTRIBUTED } from './inspector.store';
         <hugeicons-icon [icon]="icons.unattributed" [size]="14" /> Unattributed <span class="badge">{{ store.unattributedCount() }}</span>
       </div>
     </div>
+    @if (menu(); as m) {
+      <div class="menu" role="menu" [style.top.px]="m.y" [style.left.px]="m.x" (click)="$event.stopPropagation()" data-testid="tree-menu">
+        <div class="menu-title mono">{{ m.node.name }}</div>
+        <app-source-actions class="menu-actions" [node]="m.node" />
+      </div>
+    }
     @if (store.details() || store.selectedService()) {
       <div
         appSplitter
@@ -100,6 +110,9 @@ import { InspectorStore, UNATTRIBUTED } from './inspector.store';
     .details { flex: none; min-height: 80px; max-height: calc(100% - 90px); }
     .splitter.horizontal { width: auto; height: 4px; padding: 1px 0; cursor: row-resize; flex: none; }
     .icon.active { color: var(--accent); }
+    .menu { position: fixed; z-index: 10; padding: 4px; background: var(--bg); border: 1px solid var(--border); box-shadow: 0 2px 6px rgb(0 0 0 / 20%); min-width: 160px; }
+    .menu-title { color: var(--tag); padding: 0 2px 4px; }
+    .menu-actions { flex-direction: column; align-items: stretch; }
   `,
 })
 export class ComponentTree {
@@ -142,6 +155,14 @@ export class ComponentTree {
     if (!flash) return;
     this.flashId.set(id);
     setTimeout(() => this.flashId.set(null), 600);
+  }
+
+  /** Context menu of a tree node: Reveal in Elements, Open in Sources / editor. */
+  protected readonly menu = signal<{ node: TreeNode; x: number; y: number } | null>(null);
+
+  protected openMenu(event: MouseEvent, node: TreeNode): void {
+    event.preventDefault();
+    this.menu.set({ node, x: event.clientX, y: event.clientY });
   }
 
   protected readonly unattributed = UNATTRIBUTED;

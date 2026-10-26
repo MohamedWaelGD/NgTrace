@@ -11,3 +11,4 @@ export * from './replay';
 export * from './mock';
 export * from './failures';
 export * from './interceptors';
+export * from './source';

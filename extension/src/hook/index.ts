@@ -23,6 +23,7 @@ import { MockEngine } from './mock-engine';
 import { NavLog, navigationEventOf } from './nav-log';
 import { Overlay } from './overlay';
 import { InstanceRegistry } from './registry';
+import { revealElement } from './reveal';
 import { detectAngular, previewOptions, TreeScanner, type NgGlobals } from './tree';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -265,6 +266,9 @@ function start(): void {
         break;
       case 'get-details':
         post({ type: 'details', pageId, details: inspector.details(command.id) });
+        break;
+      case 'reveal':
+        post({ type: 'revealed', pageId, id: command.id, ok: revealElement(win, scanner, registry, command.id) });
         break;
       case 'expand':
         post({ type: 'expanded', pageId, target: command.target, path: command.path, entries: inspector.expand(command.target, command.path) });

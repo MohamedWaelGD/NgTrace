@@ -15,7 +15,7 @@ export interface RequestSnapshot {
   bodyRef?: unknown;
 }
 
-export interface HeaderChange {
+export interface HeaderEdit {
   name: string;
   before: string;
   after: string;
@@ -30,7 +30,7 @@ export interface FieldChange {
 export interface RequestDiff {
   added: Header[];
   removed: Header[];
-  changed: HeaderChange[];
+  changed: HeaderEdit[];
   fields: FieldChange[];
 }
 

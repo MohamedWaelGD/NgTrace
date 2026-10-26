@@ -39,14 +39,20 @@ export class TreeScanner {
           const id = this.registry.idOf(instance);
           if (parentId === null) root++;
           seen.add(id);
-          this.nodes.set(id, {
+          const node: TreeNode = {
             id,
             name: InstanceRegistry.classNameOf(instance),
             selector: selectorOf(instance, el),
             parentId,
             root,
             destroyed: false,
-          });
+          };
+          const debugInfo = InstanceRegistry.defOf(instance)?.debugInfo;
+          if (debugInfo?.filePath) {
+            node.filePath = debugInfo.filePath;
+            if (typeof debugInfo.lineNumber === 'number') node.lineNumber = debugInfo.lineNumber;
+          }
+          this.nodes.set(id, node);
           this.elements.set(id, new WeakRef(el));
           this.elementIds.set(el, id);
           nextParent = id;

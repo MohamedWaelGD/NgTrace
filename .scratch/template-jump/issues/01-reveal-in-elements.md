@@ -1,6 +1,6 @@
 # Reveal the Owner Component's host element in Elements
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: none
 
 ## What
@@ -8,3 +8,6 @@ Hook: on a `reveal` command with an Instance Id, store the host element where `i
 
 ## Acceptance
 Unit test: the hook resolves a live instance and reports a destroyed one. e2e: the button is enabled for a live owner and disabled for a Ghost Node (the Elements selection itself cannot be asserted from Playwright; assert the eval was issued).
+
+## Comments
+2026-10-26: Implemented (hook reveal.ts + 'reveal'/'revealed' messages; panel devtools.ts inspectedEval, source-actions.ts in drawer, details and tree context menu; e2e/template-jump.spec.ts).

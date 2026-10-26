@@ -8,12 +8,13 @@ import { formatBytes, formatDuration, statusLabel, typeLabel } from './format';
 import { InspectorStore } from './inspector.store';
 import { JsonTree } from './json-tree';
 import { RequestReplay } from './request-replay';
+import { SourceActions } from './source-actions';
 
 type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiator' | 'replay';
 
 @Component({
   selector: 'app-request-detail',
-  imports: [JsonTree, NgTemplateOutlet, HugeiconsIconComponent, RequestReplay],
+  imports: [JsonTree, NgTemplateOutlet, HugeiconsIconComponent, RequestReplay, SourceActions],
   template: `
     @if (store.selectedRequest(); as r) {
       <div class="tabs">
@@ -133,6 +134,9 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
           @case ('initiator') {
             <section data-testid="initiator">
               <div class="kv"><span>Owner Component</span><span class="mono tag">{{ r.attribution.className ?? '—' }}</span></div>
+              @if (ownerNode(); as owner) {
+                <div class="kv"><span></span><app-source-actions [node]="owner" /></div>
+              }
               <div class="kv"><span>Instance</span><span>{{ r.attribution.instanceId ?? (r.attribution.className ? 'several live instances' : '—') }}</span></div>
               <div class="kv"><span>Confidence</span><span [class]="'conf-' + r.attribution.confidence">{{ r.attribution.confidence }} ({{ r.attribution.via }})</span></div>
               @if (r.attribution.service) {
@@ -258,6 +262,12 @@ export class RequestDetail {
       const value = headerValue(r, name);
       return value === null ? [] : [{ name, value, token: bearerToken(value) }];
     });
+  });
+  /** The Owner Component's tree node (current page only: Instance Ids do not survive a reload). */
+  protected readonly ownerNode = computed(() => {
+    const r = this.store.selectedRequest();
+    if (!r?.id.startsWith(`${this.store.pageId()}:`)) return null;
+    return this.store.nodeById(r.attribution.instanceId);
   });
   protected readonly curl = computed(() => toCurl(this.store.selectedRequest()!, this.mask()));
   protected readonly fetchCode = computed(() => toFetch(this.store.selectedRequest()!, this.mask()));

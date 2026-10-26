@@ -1,6 +1,6 @@
 # Source location from debugInfo and Open in Sources
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: none
 
 ## What
@@ -8,3 +8,6 @@ Hook: include `filePath` and `lineNumber` from `ɵcmp.debugInfo` in tree nodes /
 
 ## Acceptance
 Unit tests for the candidate list. e2e: the demo app's component details show its `filePath:line`.
+
+## Comments
+2026-10-26: Implemented (TreeNode filePath/lineNumber from debugInfo; protocol source.ts sourceUrlCandidates; Open in Sources with file:line + copy fallback).

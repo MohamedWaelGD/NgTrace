@@ -10,6 +10,7 @@
       input { width: 60%; }
       li { margin: 4px 0; }
       #message { color: #1a73e8; }
+      .note { color: #5f6368; }
     </style>
   </head>
   <body>
@@ -39,6 +40,19 @@
     <p>A repeat of an identical GET or HEAD request sent within this many milliseconds of the first finishing (or while it is still in flight) is flagged as a Duplicate.</p>
     <form id="waste">
       <input id="duplicate-window" type="number" min="0" step="100" style="width: 8em" /> ms
+      <button>Save</button>
+    </form>
+    <h2>Open in editor</h2>
+    <p>Per origin: the absolute path of the workspace the app is built from (component source paths are relative to it) and the editor to open. "Open in editor" is hidden for origins without a project root.</p>
+    <ul id="editors"></ul>
+    <form id="editor">
+      <p><label>Origin <input id="editor-origin" placeholder="http://localhost:4200" /></label></p>
+      <p><label>Project root <input id="editor-root" placeholder="C:\work\shop or /home/me/shop" /></label></p>
+      <p>
+        <label>Editor <select id="editor-preset"></select></label>
+        <input id="editor-template" placeholder="myeditor://open?file={root}/{file}&amp;line={line}&amp;column={column}" hidden />
+      </p>
+      <p id="editor-note" class="note"></p>
       <button>Save</button>
     </form>
     <p id="message"></p>

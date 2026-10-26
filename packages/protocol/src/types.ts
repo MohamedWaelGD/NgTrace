@@ -106,6 +106,10 @@ export interface TreeNode {
   /** Index of the Angular root this node belongs to. */
   root: number;
   destroyed: boolean;
+  /** Workspace-relative source file from `ɵcmp.debugInfo` (dev builds only). */
+  filePath?: string;
+  /** 1-based line of the class declaration in `filePath`. */
+  lineNumber?: number;
 }
 
 export interface InputValue {
@@ -184,6 +188,8 @@ export type HookMessage =
   | { type: 'details'; pageId: string; details: ComponentDetails }
   | { type: 'expanded'; pageId: string; target: ValueTarget; path: string[]; entries: ValueEntry[] }
   | { type: 'picked'; pageId: string; id: number; element: string }
+  /** Answer to `reveal`: the host element is exposed for `inspect()`, or the instance is gone. */
+  | { type: 'revealed'; pageId: string; id: number; ok: boolean }
   | { type: 'live'; pageId: string; update: LiveUpdate };
 
 /** Messages the panel sends to the page hook. */
@@ -192,6 +198,8 @@ export type PanelCommand =
   | { type: 'highlight'; id: number | null }
   | { type: 'pick'; on: boolean }
   | { type: 'get-details'; id: number }
+  /** Reveal in Elements: expose this instance's host element as `window.__ngapi_reveal`. */
+  | { type: 'reveal'; id: number }
   | { type: 'expand'; target: ValueTarget; path: string[] }
   | { type: 'clear' }
   | { type: 'replay'; spec: ReplaySpec }

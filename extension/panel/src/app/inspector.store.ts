@@ -6,6 +6,8 @@ import {
   DEFAULT_MASKED_HEADERS,
   DEFAULT_DUPLICATE_WINDOW_MS,
   DEFAULT_QUICK_COPY_HEADERS,
+  EDITOR_SETTINGS_PREFIX,
+  REVEAL_GLOBAL,
   detectWaste,
   groupReplays,
   matchRule,
@@ -16,6 +18,7 @@ import {
   type AngularStatus,
   type CapturedRequest,
   type ComponentDetails,
+  type EditorSettings,
   type HarLikeEntry,
   type HookMessage,
   type LiveUpdate,
@@ -27,6 +30,7 @@ import {
   type ValueEntry,
   type ValueTarget,
 } from '@ngapi/protocol';
+import { inspectedEval } from './devtools';
 
 /** Virtual tree selection for requests without an Owner Component. */
 export const UNATTRIBUTED = -1;
@@ -106,6 +110,9 @@ export class InspectorStore {
     }
     return counts;
   });
+
+  /** "Open in editor" settings for the inspected page's origin (extension options). */
+  readonly editorSettings = signal<EditorSettings>({});
 
   private noteComponents(names: (string | null)[]): void {
     const fresh = names.filter((n): n is string => !!n && !this.seenComponents().has(n));
@@ -283,6 +290,14 @@ export class InspectorStore {
       if (origin) void chrome.storage?.local.set({ [MOCKS_KEY + origin]: rules });
       this.armMocks();
     });
+    effect(() => {
+      const origin = originOf(this.pageUrl());
+      if (origin) void this.loadEditorSettings(origin);
+    });
+    chrome.storage?.onChanged.addListener((changes) => {
+      const origin = originOf(untracked(() => this.pageUrl()));
+      if (origin && changes[EDITOR_SETTINGS_PREFIX + origin]) void this.loadEditorSettings(origin);
+    });
     // The hook drops the rules when these stop arriving (the panel closed).
     setInterval(() => this.armMocks(), MOCK_HEARTBEAT_MS);
   }
@@ -353,6 +368,10 @@ export class InspectorStore {
       case 'live':
         this.applyLive(m.update);
         break;
+      case 'revealed':
+        // Selects the element in the Elements panel (the Console's command-line API).
+        if (m.ok) inspectedEval(`inspect(window.${REVEAL_GLOBAL})`);
+        break;
     }
   }
 
@@ -416,6 +435,21 @@ export class InspectorStore {
       next[i] = { ...r, enrichment: list[i].enrichment ?? r.enrichment };
       return next;
     });
+  }
+
+  private async loadEditorSettings(origin: string): Promise<void> {
+    const stored = await chrome.storage?.sync.get(EDITOR_SETTINGS_PREFIX + origin);
+    const settings = stored?.[EDITOR_SETTINGS_PREFIX + origin];
+    this.editorSettings.set(settings && typeof settings === 'object' ? (settings as EditorSettings) : {});
+  }
+
+  /** Reveal in Elements: the hook exposes the host element, then `revealed` selects it. */
+  reveal(id: number): void {
+    this.send({ type: 'reveal', id });
+  }
+
+  nodeById(id: number | null): TreeNode | null {
+    return id === null ? null : (this.tree().find((n) => n.id === id) ?? null);
   }
 
   private async loadMockRules(origin: string): Promise<void> {
@@ -587,7 +621,7 @@ export class InspectorStore {
 const MOCKS_KEY = 'mocks:';
 const MOCK_HEARTBEAT_MS = 5000;
 
-function originOf(url: string): string | null {
+export function originOf(url: string): string | null {
   try {
     return new URL(url).origin;
   } catch {

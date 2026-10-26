@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import type { InjectedService, ProviderInfo, ValueTarget } from '@ngapi/protocol';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { ICONS, Twisty } from './icons';
+import { SourceActions } from './source-actions';
 import { InspectorStore, targetKey } from './inspector.store';
 import { ValueTree } from './value-tree';
 
@@ -10,7 +11,7 @@ type Section = 'inputs' | 'state' | 'services' | 'injectors';
 /** Selected component: @Inputs, State, injected services and the injector path (read-only). */
 @Component({
   selector: 'app-component-details',
-  imports: [ValueTree, HugeiconsIconComponent, Twisty],
+  imports: [ValueTree, HugeiconsIconComponent, Twisty, SourceActions],
   template: `
     @if (store.selectedService(); as service) {
       <div class="pane-title service-title" data-testid="service-title">
@@ -42,6 +43,7 @@ type Section = 'inputs' | 'state' | 'services' | 'injectors';
         <button class="icon" title="Refresh values" (click)="refresh(d.id)" data-testid="refresh-details" aria-label="Refresh values"><hugeicons-icon [icon]="icons.refresh" [size]="14" /></button>
       </div>
       <div class="scroll">
+        <app-source-actions class="source" [node]="store.selectedNode()" [alwaysShowLocation]="true" />
         @if (d.inputs.length) {
           <h5 (click)="toggle('inputs')"><app-twisty [open]="open().has('inputs')" /> &#64;Inputs</h5>
           @if (open().has('inputs')) {
@@ -132,6 +134,7 @@ type Section = 'inputs' | 'state' | 'services' | 'injectors';
     .provider { padding-left: 22px; }
     .muted { color: var(--muted); padding: 2px 8px; }
     .service-title { color: var(--tag); }
+    .source { padding: 3px 8px; }
   `,
 })
 export class ComponentDetails {

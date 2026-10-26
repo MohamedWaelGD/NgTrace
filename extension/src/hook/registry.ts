@@ -4,7 +4,7 @@ import type { ComponentRegistry } from './attribution';
 type ComponentDef = {
   selectors?: unknown[][];
   inputs?: Record<string, string | unknown[]>;
-  debugInfo?: { className?: string } | null;
+  debugInfo?: { className?: string; filePath?: string; lineNumber?: number } | null;
 };
 
 interface Known {

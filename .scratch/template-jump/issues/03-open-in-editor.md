@@ -1,6 +1,6 @@
 # Open in editor with per-origin project root and editor presets
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 02
 
 ## What
@@ -8,3 +8,6 @@ Protocol: editor presets (VS Code default, VS Code Insiders, Cursor, Windsurf, Z
 
 ## Acceptance
 Unit tests: each preset renders the expected URL for a Windows and a POSIX root. e2e: with a root set in settings, the button appears and builds the VS Code URL.
+
+## Comments
+2026-10-26: Implemented (protocol EDITOR_PRESETS, editorTemplate, editorUrl; per-origin editor:<origin> settings in chrome.storage.sync; Options 'Open in editor' section; panel button hidden without a project root).
