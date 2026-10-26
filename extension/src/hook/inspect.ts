@@ -1,4 +1,13 @@
-import type { ComponentDetails, InjectedService, InjectorLevel, ProviderInfo, ValueEntry, ValueTarget } from '@ngapi/protocol';
+import {
+  serialiseSignalGraph,
+  type ComponentDetails,
+  type InjectedService,
+  type InjectorLevel,
+  type ProviderInfo,
+  type SignalNode,
+  type ValueEntry,
+  type ValueTarget,
+} from '@ngapi/protocol';
 import { isFrameworkClass } from './attribution';
 import { InstanceRegistry } from './registry';
 import { isInternalKey, preview, type TreeScanner } from './tree';
@@ -32,7 +41,7 @@ export class Inspector {
     const el = this.scanner.element(id);
     const empty: ComponentDetails = { id, inputs: [], state: [], services: [], injectorPath: [], diSupported: false };
     if (!instance) return empty;
-    const details: ComponentDetails = { ...empty, inputs: this.scanner.inputs(id, ng), state: this.entries(instance) };
+    const details: ComponentDetails = { ...empty, inputs: this.scanner.inputs(id, ng), state: this.entries(instance), signals: this.signals(id) };
     const diSupported = typeof ng['ɵgetDependenciesFromInjectable'] === 'function' && typeof ng['ɵgetInjectorResolutionPath'] === 'function';
     if (!el || !diSupported) return details;
     details.diSupported = true;
@@ -41,6 +50,17 @@ export class Inspector {
     details.services = this.injectedServices(ng, injector, instance);
     details.injectorPath = this.injectorPath(ng, injector);
     return details;
+  }
+
+  /**
+   * The component's signal graph (its template and effects, and what they read), from
+   * `ng.ɵgetSignalGraph`. Reads cached values only: a computed is never forced to evaluate.
+   */
+  signals(id: number): SignalNode[] | null {
+    const ng = this.ng();
+    const el = this.scanner.element(id);
+    if (typeof ng['ɵgetSignalGraph'] !== 'function' || !el) return null;
+    return safe(() => serialiseSignalGraph(ng['ɵgetSignalGraph'](ng.getInjector(el)), (v) => preview(v))) ?? null;
   }
 
   /** False once the service instance was garbage-collected. */

@@ -64,6 +64,18 @@ import type { TreeNode } from '@ngapi/protocol';
             <span class="badge" data-testid="badge">{{ row.count }}</span>
           }
         </div>
+        @for (res of row.resources; track res.name) {
+          <div
+            class="row resource"
+            [style.padding-left.px]="26 + row.depth * 14"
+            (click)="store.filterByResource(res.name)"
+            [title]="'Owner Resource ' + res.name + ': show its requests'"
+            [attr.data-testid]="'resource-' + res.name"
+          >
+            <span class="resource-name">{{ res.name.slice(res.name.lastIndexOf('.') + 1) }}</span>
+            <span class="badge">{{ res.count }}</span>
+          </div>
+        }
       } @empty {
         <div class="empty">No components found yet.</div>
       }
@@ -109,6 +121,8 @@ import type { TreeNode } from '@ngapi/protocol';
     .name { color: var(--tag); font-family: var(--mono); }
     .picked { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
     .badge { margin-left: auto; background: var(--badge); color: var(--fg); border-radius: 8px; padding: 0 6px; font-size: 10px; }
+    .row.resource { color: var(--muted); font-family: var(--mono); font-size: 11px; }
+    .resource-name::before { content: '◇ '; }
     .badge.fail { background: color-mix(in srgb, var(--error) 22%, var(--bg)); }
     .badge.fail + .badge { margin-left: 0; }
     .empty { color: var(--muted); padding: 8px; }

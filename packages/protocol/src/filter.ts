@@ -22,6 +22,7 @@ export const FILTER_KEYS = [
   'has-response-header',
   'component',
   'service',
+  'resource',
 ] as const;
 type FilterKey = (typeof FILTER_KEYS)[number];
 
@@ -113,6 +114,8 @@ function compileProperty(key: FilterKey, value: string): Predicate {
       return (r) => (r.attribution.className ?? r.attribution.group ?? '').toLowerCase().includes(v);
     case 'service':
       return (r) => (r.attribution.service ?? '').toLowerCase().includes(v);
+    case 'resource':
+      return (r) => (r.attribution.ownerResource ?? '').toLowerCase().includes(v);
   }
 }
 

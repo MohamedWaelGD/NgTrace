@@ -63,6 +63,16 @@ describe('request filter', () => {
     expect(run('service:auth')).toEqual([login.url]);
   });
 
+  it('supports resource: for the Owner Resource', () => {
+    const fromResource = makeRequest({
+      url: 'http://localhost:4200/api/products/1',
+      attribution: { ...products.attribution, ownerResource: 'ProductDetailComponent.product' },
+    });
+    const both = [...all, fromResource];
+    expect(both.filter(createRequestFilter({ text: 'resource:productdetailcomponent.product' })).map((r) => r.url)).toEqual([fromResource.url]);
+    expect(both.filter(createRequestFilter({ text: '-resource:product' }))).toHaveLength(3);
+  });
+
   it('negates property filters too', () => {
     expect(run('-method:GET')).toEqual([login.url]);
   });

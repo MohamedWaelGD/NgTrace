@@ -4,6 +4,7 @@ import { InstanceRegistry } from './registry';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // ProfilerEvent values from @angular/core (stable since v12).
+const TEMPLATE_CREATE_START = 0;
 const LIFECYCLE_HOOK_START = 4;
 const LIFECYCLE_HOOK_END = 5;
 const OUTPUT_START = 6;
@@ -24,6 +25,8 @@ export class OwnerContext {
   profilerInstalled = false;
   /** Called with component instances seen by the profiler, until set back to null. */
   onComponent: ((instance: object) => void) | null = null;
+  /** Called when a component instance's template is created (before its first effect flush). */
+  onTemplateCreate: ((instance: object) => void) | null = null;
   zonePatched = false;
   /** Called when a change-detection pass (or, before Angular 20, a template update) ends. */
   onChangeDetection: (() => void) | null = null;
@@ -44,6 +47,7 @@ export class OwnerContext {
 
   readonly profiler = (event: number, instance: unknown): void => {
     if (this.onComponent && InstanceRegistry.isComponent(instance)) this.onComponent(instance);
+    if (event === TEMPLATE_CREATE_START && this.onTemplateCreate && InstanceRegistry.isComponent(instance)) this.onTemplateCreate(instance);
     if (event === LIFECYCLE_HOOK_START || event === OUTPUT_START) {
       this.syncStack.push(
         InstanceRegistry.isComponent(instance)
@@ -60,6 +64,16 @@ export class OwnerContext {
       this.onChangeDetection?.();
     }
   };
+
+  /** Runs `fn` now with `owner` as the sync owner (e.g. a resource loader, ADR 9). */
+  runAs<T>(owner: OwnerRef, fn: () => T): T {
+    this.syncStack.push(owner);
+    try {
+      return fn();
+    } finally {
+      this.syncStack.pop();
+    }
+  }
 
   /** Runs `fn` later with the owner that is current now. */
   bind<F extends (...args: any[]) => any>(fn: F): F {

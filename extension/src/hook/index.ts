@@ -23,6 +23,7 @@ import { MockEngine } from './mock-engine';
 import { NavLog, navigationEventOf } from './nav-log';
 import { Overlay } from './overlay';
 import { InstanceRegistry } from './registry';
+import { ResourceTracker } from './resources';
 import { revealElement } from './reveal';
 import { detectAngular, previewOptions, TreeScanner, type NgGlobals } from './tree';
 
@@ -49,6 +50,7 @@ function start(): void {
       inputs: (id) => scanner.inputs(id, ng()),
       entries: (target, path) => inspector.expand(target, path),
       isGone: (target) => (target.kind === 'component' ? registry.isDestroyed(target.id) : !inspector.hasService(target.id)),
+      signals: (id) => inspector.signals(id),
     },
     (update) => post({ type: 'live', pageId, update }),
     (fn, ms) => setTimeoutNative(fn, ms),
@@ -117,6 +119,9 @@ function start(): void {
     internals.tryAttach(win.ng, instance);
     if (internals.done) context.onComponent = null;
   };
+  // Owner Resources (ADR 9): wrap resource loaders before the component's first effect flush.
+  const resources = new ResourceTracker(context, registry);
+  context.onTemplateCreate = (instance) => resources.scan(instance);
   context.watchAngular(win);
   context.patchAsync(win);
 

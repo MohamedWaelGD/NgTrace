@@ -153,6 +153,11 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
               @if (ownerNode(); as owner) {
                 <div class="kv"><span></span><app-source-actions [node]="owner" /></div>
               }
+              @if (r.attribution.ownerResource) {
+                <div class="kv" data-testid="owner-resource"><span>Owner Resource</span><span class="mono tag">{{ r.attribution.ownerResource }}</span></div>
+              } @else if (store.status()?.kind === 'production') {
+                <div class="kv"><span>Owner Resource</span><span class="muted">Needs a development build</span></div>
+              }
               <div class="kv"><span>Instance</span><span>{{ r.attribution.instanceId ?? (r.attribution.className ? 'several live instances' : '—') }}</span></div>
               <div class="kv"><span>Confidence</span><span [class]="'conf-' + r.attribution.confidence">{{ r.attribution.confidence }} ({{ r.attribution.via }})</span></div>
               @if (r.attribution.service) {

@@ -1,9 +1,11 @@
-import { diffEntries, LiveThrottle, type InputValue, type LiveUpdate, type ValueEntry, type ValueTarget } from '@ngapi/protocol';
+import { diffEntries, diffSignals, LiveThrottle, type InputValue, type LiveUpdate, type SignalNode, type ValueEntry, type ValueTarget } from '@ngapi/protocol';
 
 export interface LiveSource {
   inputs(id: number): InputValue[];
   entries(target: ValueTarget, path: string[]): ValueEntry[];
   isGone(target: ValueTarget): boolean;
+  /** The component's signal graph; null when unavailable. */
+  signals?(id: number): SignalNode[] | null;
 }
 
 /**
@@ -14,6 +16,7 @@ export class LiveValues {
   private target: ValueTarget | null = null;
   private paths: string[][] = [];
   private lastInputs: InputValue[] | null = null;
+  private lastSignals: SignalNode[] | null = null;
   private lastLists = new Map<string, ValueEntry[]>();
   private lastThrottled = false;
   private readonly throttle = new LiveThrottle();
@@ -35,6 +38,7 @@ export class LiveValues {
     this.paths = paths.some((p) => !p.length) ? paths : [[], ...paths];
     if (!same) {
       this.lastInputs = null;
+      this.lastSignals = null;
       this.lastLists.clear();
     }
     // Baseline for paths not read yet, so the first update after following only reports real changes.
@@ -65,6 +69,13 @@ export class LiveValues {
       if (this.lastInputs) update.changedInputs = diffEntries(this.lastInputs, inputs);
       if (!this.lastInputs || update.changedInputs.length) update.inputs = inputs;
       this.lastInputs = inputs;
+      const signals = this.source.signals?.(target.id) ?? null;
+      if (signals) {
+        const changed = this.lastSignals ? diffSignals(this.lastSignals, signals) : [];
+        if (!this.lastSignals || changed.length) update.signals = signals;
+        update.changedSignals = changed;
+        this.lastSignals = signals;
+      }
     }
     for (const path of this.paths) {
       const key = JSON.stringify(path);
@@ -78,7 +89,8 @@ export class LiveValues {
     this.lastRead = Date.now();
     if (publish) this.throttle.record(performance.now() - started);
     update.throttled = this.throttle.throttled;
-    const changed = update.changedInputs.length || update.changedPaths.length || update.throttled !== this.lastThrottled;
+    const changed =
+      update.changedInputs.length || update.changedPaths.length || update.changedSignals?.length || update.throttled !== this.lastThrottled;
     this.lastThrottled = update.throttled;
     if (publish && changed) this.post(update);
   }

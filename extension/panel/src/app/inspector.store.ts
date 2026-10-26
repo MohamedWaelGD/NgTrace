@@ -51,6 +51,8 @@ export interface TreeRow {
   count: number;
   /** Failed Requests among its own requests. */
   failed: number;
+  /** Owner Resources of this instance with their request counts (dev builds). */
+  resources: { name: string; count: number }[];
   hasChildren: boolean;
 }
 
@@ -210,6 +212,19 @@ export class InspectorStore {
     return counts;
   });
 
+  /** Request counts per Owner Resource, per Instance Id. */
+  private readonly resourceCounts = computed(() => {
+    const byInstance = new Map<number, Map<string, number>>();
+    for (const r of this.currentPageRequests()) {
+      const { instanceId, ownerResource } = r.attribution;
+      if (instanceId === null || !ownerResource) continue;
+      const counts = byInstance.get(instanceId) ?? new Map<string, number>();
+      counts.set(ownerResource, (counts.get(ownerResource) ?? 0) + 1);
+      byInstance.set(instanceId, counts);
+    }
+    return byInstance;
+  });
+
   /** Requests per Owner Service on the current page. */
   readonly serviceCounts = computed(() => {
     const counts = new Map<string, number>();
@@ -227,12 +242,14 @@ export class InspectorStore {
     const rows: TreeRow[] = [];
     const children = this.children();
     const counts = this.ownCounts();
+    const resources = this.resourceCounts();
     const collapsed = this.collapsed();
     const walk = (parentId: number | null, depth: number) => {
       for (const node of children.get(parentId) ?? []) {
         const kids = children.get(node.id) ?? [];
         const c = counts.get(node.id);
-        rows.push({ node, depth, count: c?.all ?? 0, failed: c?.failed ?? 0, hasChildren: kids.length > 0 });
+        const owned = [...(resources.get(node.id) ?? [])].map(([name, count]) => ({ name, count }));
+        rows.push({ node, depth, count: c?.all ?? 0, failed: c?.failed ?? 0, resources: owned, hasChildren: kids.length > 0 });
         if (!collapsed.has(node.id)) walk(node.id, depth + 1);
       }
     };
@@ -399,7 +416,12 @@ export class InspectorStore {
     const details = this.details();
     if (target.kind === 'component' && details) {
       const root = u.lists.find((l) => !l.path.length);
-      this.details.set({ ...details, inputs: u.inputs ?? details.inputs, state: root?.entries ?? details.state });
+      this.details.set({
+        ...details,
+        inputs: u.inputs ?? details.inputs,
+        state: root?.entries ?? details.state,
+        signals: u.signals ?? details.signals,
+      });
     }
     this.expansions.update((map) => {
       const next = new Map(map);
@@ -410,7 +432,11 @@ export class InspectorStore {
       }
       return next;
     });
-    const keys = [...u.changedInputs.map((n) => `input ${n}`), ...u.changedPaths.map((p) => targetKey(target, p))];
+    const keys = [
+      ...u.changedInputs.map((n) => `input ${n}`),
+      ...u.changedPaths.map((p) => targetKey(target, p)),
+      ...(u.changedSignals ?? []).map((id) => `signal ${id}`),
+    ];
     if (!keys.length) return;
     this.flashing.set(new Set(keys));
     if (this.flashTimer) clearTimeout(this.flashTimer);
@@ -627,6 +653,14 @@ export class InspectorStore {
     const on = !this.picking();
     this.picking.set(on);
     this.send({ type: 'pick', on });
+  }
+
+  /** Narrows the table to one Owner Resource (the `resource:` filter). */
+  filterByResource(name: string): void {
+    const rest = this.filterText()
+      .split(/\s+/)
+      .filter((t) => t && !/^-?resource:/i.test(t));
+    this.filterText.set([...rest, `resource:${name}`].join(' '));
   }
 
   toggleChip<T>(sig: { (): T[]; set(v: T[]): void }, chip: T): void {

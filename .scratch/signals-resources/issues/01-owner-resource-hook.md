@@ -1,6 +1,6 @@
 # Hook: find resources on component fields and wrap their loaders
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: none
 
 ## What
@@ -8,3 +8,6 @@ On a component instance's first `TemplateCreate` profiler event, scan its own en
 
 ## Acceptance
 Unit tests with fake resource objects: a wrapped loader tags the request; unknown loader frames give the fallback step. Demo: a component with an `httpResource` (with and without `debugName`) and an `rxResource`; e2e asserts the Owner Resource and Owner Component.
+
+## Comments
+2026-10-26: Implemented (hook resources.ts ResourceTracker on TemplateCreate; OwnerContext.runAs; Attribution.ownerResource / via 'resource'; 'resource loader' Call Chain step; demo /resources; resources.test.ts, e2e/signals-resources.spec.ts).

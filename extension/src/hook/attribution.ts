@@ -4,7 +4,9 @@ import type { Attribution } from '@ngapi/protocol';
 export interface OwnerRef {
   id: number;
   className: string;
-  via: 'lifecycle' | 'listener' | 'async';
+  via: 'lifecycle' | 'listener' | 'async' | 'resource';
+  /** Owner Resource, while one of the component's resource loaders runs (ADR 9). */
+  resource?: string;
 }
 
 export interface ComponentRegistry {
@@ -57,7 +59,8 @@ const FRAMEWORK_CLASSES = new Set([
   'NgZone', 'NoopNgZone', 'ApplicationRef', 'ApplicationInitStatus', 'PlatformRef', 'ComponentFactory', 'ComponentRef',
   'ComponentRef$1', 'NodeInjectorFactory', 'NodeInjector', 'R3Injector', 'EnvironmentInjector', 'EventEmitter',
   'EventEmitter_', 'ViewRef', 'ViewRef$1', 'RootViewRef', 'ChangeDetectionSchedulerImpl', 'EffectScheduler',
-  'ZoneAwareEffectScheduler', 'PendingTasks', 'PendingTasksInternal', 'Testability',
+  'ZoneAwareEffectScheduler', 'PendingTasks', 'PendingTasksInternal', 'Testability', 'ResourceImpl', 'HttpResourceImpl',
+  'BaseWritableResource',
   // @angular/common/http
   'HttpClient', 'HttpXhrBackend', 'FetchBackend', 'HttpInterceptorHandler', 'HttpHandler', 'HttpBackend',
   'HttpXsrfInterceptor', 'JsonpClientBackend',
@@ -68,6 +71,9 @@ const FRAMEWORK_CLASSES = new Set([
   'DomEventsPlugin', 'KeyEventsPlugin', 'EventManagerPlugin',
 ]);
 const FRAMEWORK_RE = /(Subscriber|Subject|Scheduler|Action|ZoneSpec|Observer)$|^ɵ/;
+/** A resource's loader running (`resource()`, `httpResource()`, `rxResource()`). */
+const RESOURCE_FRAME_RE = /\b_?(Http)?ResourceImpl\b|\bloadEffect\b/;
+const RESOURCE_LOADER_STEP = 'resource loader';
 
 export function isFrameworkClass(name: string): boolean {
   return FRAMEWORK_CLASSES.has(name) || FRAMEWORK_RE.test(name);
@@ -110,12 +116,16 @@ export function attribute(input: AttributionInput): { attribution: Attribution; 
   const creationClasses = appClassesOf(creationFrames);
   const appClasses = creationClasses.length ? creationClasses : sendClasses;
 
+  const { syncOwner, asyncOwner, registry } = input;
+  // A resource loader we could not tie to a component's resource: say so in the Call Chain (ADR 9).
+  const knownResource = !!(syncOwner?.resource ?? asyncOwner?.resource);
+  const loaderStep = !knownResource && [...frames, ...creationFrames].some((f) => RESOURCE_FRAME_RE.test(f.fn)) ? [RESOURCE_LOADER_STEP] : [];
+
   const chainFor = (owner: string | null) => {
-    const chain = owner && appClasses[0] !== owner ? [owner, ...appClasses] : [...appClasses];
+    const chain = owner && appClasses[0] !== owner ? [owner, ...loaderStep, ...appClasses] : [...loaderStep, ...appClasses];
     return dedupeAdjacent([...chain, transport]);
   };
 
-  const { syncOwner, asyncOwner, registry } = input;
   const isComponent = (c: string) => registry.liveIds(c).length > 0 || c.endsWith('Component');
   const owners = new Set([syncOwner?.className, asyncOwner?.className, input.route?.componentClass]);
   const service = [...appClasses].reverse().find((c) => !isComponent(c) && !owners.has(c)) ?? null;
@@ -155,7 +165,7 @@ export function attribute(input: AttributionInput): { attribution: Attribution; 
         confidence: 'context',
         via: 'route',
         route: `${route.path} (${route.phase})`,
-        callChain: dedupeAdjacent([`Route ${route.path}`, ...appClasses, transport]),
+        callChain: dedupeAdjacent([`Route ${route.path}`, ...loaderStep, ...appClasses, transport]),
       },
     };
   }
@@ -184,7 +194,9 @@ function fromOwner(
   callChain: string[],
   base: Pick<Attribution, 'route' | 'service' | 'group'>,
 ): Attribution {
-  return { ...base, instanceId: owner.id, className: owner.className, confidence: 'context', via, callChain };
+  const attribution: Attribution = { ...base, instanceId: owner.id, className: owner.className, confidence: 'context', via, callChain };
+  if (owner.resource) attribution.ownerResource = owner.resource;
+  return attribution;
 }
 
 function appClassesOf(frames: Frame[]): string[] {

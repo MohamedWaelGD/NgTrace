@@ -1,12 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import type { InjectedService, ProviderInfo, ValueTarget } from '@ngapi/protocol';
+import { Component, computed, ElementRef, inject, signal } from '@angular/core';
+import type { InjectedService, ProviderInfo, SignalNode, ValueTarget } from '@ngapi/protocol';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { ICONS, Twisty } from './icons';
 import { SourceActions } from './source-actions';
 import { InspectorStore, targetKey } from './inspector.store';
 import { ValueTree } from './value-tree';
 
-type Section = 'inputs' | 'state' | 'services' | 'injectors';
+type Section = 'inputs' | 'state' | 'signals' | 'services' | 'injectors';
 
 /** Selected component: @Inputs, State, injected services and the injector path (read-only). */
 @Component({
@@ -59,6 +59,45 @@ type Section = 'inputs' | 'state' | 'services' | 'injectors';
         @if (open().has('state')) {
           <div class="section-body" data-testid="state">
             <app-value-tree [target]="componentTarget(d.id)" [entries]="d.state" />
+          </div>
+        }
+
+        <h5 (click)="toggle('signals')"><app-twisty [open]="open().has('signals')" /> Signals</h5>
+        @if (open().has('signals')) {
+          <div class="section-body" data-testid="signals">
+            @if (d.signals; as signals) {
+              @for (s of signals; track s.id) {
+                <div
+                  class="signal-row"
+                  [class.flash]="store.flashing().has('signal ' + s.id)"
+                  [class.target]="scrolledTo() === s.id"
+                  [attr.data-signal-id]="s.id"
+                  [attr.data-testid]="'signal-' + s.label"
+                >
+                  <span class="kind">{{ s.kind }}</span>
+                  <span class="key">{{ s.label }}</span>
+                  @if (s.preview !== undefined) {
+                    @if (s.preview === null) {
+                      : <span class="muted-value" title="Never read since it was created or last changed; not evaluated by the inspector">not evaluated</span>
+                    } @else {
+                      : <span class="value">{{ s.preview }}</span>
+                    }
+                  }
+                  @if (s.dependsOn.length && s.kind !== 'signal') {
+                    <span class="deps">
+                      depends on
+                      @for (dep of s.dependsOn; track dep) {
+                        <button class="dep" (click)="scrollToSignal(dep)" [title]="'Show ' + labelOf(signals, dep)" data-testid="depends-on">{{ labelOf(signals, dep) }}</button>
+                      }
+                    </span>
+                  }
+                </div>
+              } @empty {
+                <div class="muted">No signals read by its template or effects.</div>
+              }
+            } @else {
+              <div class="muted">Needs a development build (and Angular 20+).</div>
+            }
           </div>
         }
 
@@ -135,12 +174,31 @@ type Section = 'inputs' | 'state' | 'services' | 'injectors';
     .muted { color: var(--muted); padding: 2px 8px; }
     .service-title { color: var(--tag); }
     .source { padding: 3px 8px; }
+    .signal-row { font-family: var(--mono); padding: 1px 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; }
+    .signal-row.target { outline: 1px solid var(--accent); }
+    .kind { color: var(--muted); font-size: 10px; }
+    .muted-value { color: var(--muted); font-style: italic; }
+    .deps { color: var(--muted); font-family: system-ui, sans-serif; font-size: 11px; display: inline-flex; flex-wrap: wrap; gap: 3px; align-items: baseline; }
+    .dep { font-family: var(--mono); font-size: 11px; padding: 0 4px; border-radius: 8px; }
   `,
 })
 export class ComponentDetails {
   protected readonly store = inject(InspectorStore);
   protected readonly icons = ICONS;
-  protected readonly open = signal<ReadonlySet<Section>>(new Set<Section>(['inputs', 'state', 'services']));
+  protected readonly open = signal<ReadonlySet<Section>>(new Set<Section>(['inputs', 'state', 'signals', 'services']));
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  /** Signal node a "depends on" chip just scrolled to (outlined briefly). */
+  protected readonly scrolledTo = signal<string | null>(null);
+
+  protected labelOf(signals: SignalNode[], id: string): string {
+    return signals.find((s) => s.id === id)?.label ?? `#${id}`;
+  }
+
+  protected scrollToSignal(id: string): void {
+    this.host.nativeElement.querySelector(`[data-signal-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'nearest' });
+    this.scrolledTo.set(id);
+    setTimeout(() => this.scrolledTo.set(null), 1200);
+  }
 
   protected readonly visibleServices = computed(() => {
     const services = this.store.details()?.services ?? [];

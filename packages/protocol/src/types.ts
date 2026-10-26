@@ -1,5 +1,6 @@
 import type { InterceptorStep } from './interceptors';
 import type { MockRule } from './mock';
+import type { SignalNode } from './signals';
 
 /** Shared data model and message contracts between hook ↔ content ↔ background ↔ panel. */
 
@@ -18,9 +19,11 @@ export interface Attribution {
   className: string | null;
   confidence: Confidence;
   /** How the attribution was made, shown in the Initiator tab. */
-  via: 'lifecycle' | 'listener' | 'async' | 'route' | 'stack' | 'none';
+  via: 'lifecycle' | 'listener' | 'async' | 'route' | 'stack' | 'resource' | 'none';
   /** Set when the request was sent while the router ran guards/resolvers, e.g. `stores/:id (resolve)`. */
   route: string | null;
+  /** Owner Resource (ADR 9): the component's resource whose loader sent the request, e.g. `ProductDetailComponent.product` (dev builds). */
+  ownerResource?: string;
   /** Owner Service: the innermost non-component app class in the Call Chain (the service that called HttpClient). */
   service: string | null;
   /** Outermost-first class names, ending with the transport (HttpClient / fetch / XMLHttpRequest). */
@@ -160,6 +163,8 @@ export interface ComponentDetails {
   injectorPath: InjectorLevel[];
   /** False when `ng.ɵgetDependenciesFromInjectable` and friends are unavailable (older Angular). */
   diSupported: boolean;
+  /** Signal graph of the component (template and effects); null without `ng.ɵgetSignalGraph` (production builds). */
+  signals?: SignalNode[] | null;
 }
 
 /** Live Values update (ADR 5): only the lists that changed since the last read are present. */
@@ -172,6 +177,10 @@ export interface LiveUpdate {
   /** Changed rows: input names, and value paths (list path + entry name). */
   changedInputs: string[];
   changedPaths: string[][];
+  /** The component's signal graph; absent when unchanged or unavailable. */
+  signals?: SignalNode[];
+  /** Ids of signal nodes whose value or dependencies changed. */
+  changedSignals?: string[];
   /** True while reads are slow and the interval has backed off. */
   throttled: boolean;
 }
