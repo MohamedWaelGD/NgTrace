@@ -1,6 +1,6 @@
 # Pure HttpRequest snapshot and diff
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: none
 
 ## What
@@ -8,3 +8,6 @@ Blocked by: none
 
 ## Acceptance
 Unit tests: added/removed/changed headers, URL and params changes, body change detected by reference and by serialised value, no-op step yields an empty diff.
+
+## Comments
+2026-10-26: Implemented (protocol interceptors.ts: RequestSnapshot, diffRequests, isEmptyDiff, InterceptorStep; interceptorSteps on CapturedRequest).

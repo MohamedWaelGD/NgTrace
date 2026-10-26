@@ -1,3 +1,4 @@
+import type { InterceptorStep } from './interceptors';
 import type { MockRule } from './mock';
 
 /** Shared data model and message contracts between hook ↔ content ↔ background ↔ panel. */
@@ -73,6 +74,8 @@ export interface CapturedRequest {
   retryOf?: string;
   /** Attempt Number within a retry chain (1 for the first attempt), when the hook can tell. */
   attempt?: number;
+  /** Interceptor Steps in chain order (dev builds); absent when the hook could not observe the chain. */
+  interceptorSteps?: InterceptorStep[];
   /** Browser-level request headers from the DevTools HAR, once Enriched. */
   enrichment: { requestHeaders: Header[]; serverTiming?: number; phases?: TimingPhase[] } | null;
 }

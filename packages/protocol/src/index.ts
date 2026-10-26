@@ -10,3 +10,4 @@ export * from './diff';
 export * from './replay';
 export * from './mock';
 export * from './failures';
+export * from './interceptors';
