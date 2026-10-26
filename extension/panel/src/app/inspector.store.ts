@@ -712,7 +712,8 @@ export class InspectorStore {
   selectRequest(r: CapturedRequest | null): void {
     this.selectedRequestId.set(r?.id ?? null);
     // A request of the Live Values target: show the values just before it was sent.
-    if (r && this.history && r.startMono !== undefined && this.historyMarkers().includes(r)) {
+    // By id: the row may hold an older copy of the request than the store (upserts replace it).
+    if (r && this.history && r.startMono !== undefined && this.historyMarkers().some((m) => m.id === r.id)) {
       this.viewHistory(Math.max(0, this.history.before(r.startMono)));
     }
     const owner = r?.attribution.instanceId ?? null;

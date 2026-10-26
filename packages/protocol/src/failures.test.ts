@@ -69,6 +69,14 @@ describe('retryChains', () => {
   });
 });
 
+describe('requests an interceptor answered are not Waste', () => {
+  it('never flags a cache hit as a Duplicate', () => {
+    const first = makeRequest({ startTime: 0, endTime: 10 });
+    const cached = makeRequest({ startTime: 20, endTime: 21, shortCircuitedBy: 'cacheInterceptor' });
+    expect(detectWaste([first, cached], 1000).size).toBe(0);
+  });
+});
+
 describe('Retries are not Waste', () => {
   it('never flags a Retry as a Duplicate', () => {
     const first = makeRequest({ status: 500, startTime: 0, endTime: 10, attempt: 1 });
