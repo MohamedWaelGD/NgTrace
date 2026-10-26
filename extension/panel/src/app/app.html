@@ -1,0 +1,93 @@
+<header class="toolbar">
+  <button
+    class="icon record"
+    [class.on]="!store.paused()"
+    [title]="store.paused() ? 'Resume recording' : 'Pause recording'"
+    (click)="store.setPaused(!store.paused())"
+    data-testid="record"
+  >
+    ●
+  </button>
+  <button class="icon" title="Clear" (click)="store.clear()" data-testid="clear">⊘</button>
+  <label><input type="checkbox" [checked]="store.preserveLog()" (change)="store.preserveLog.set(!store.preserveLog())" /> Preserve log</label>
+  <span class="sep"></span>
+  <label title="Show requests of child components too">
+    <input type="checkbox" [checked]="store.includeDescendants()" (change)="store.includeDescendants.set(!store.includeDescendants())" />
+    Include descendants
+  </label>
+  <label title="Show requests of every instance of the selected component's class">
+    <input type="checkbox" [checked]="store.groupByClass()" (change)="store.groupByClass.set(!store.groupByClass())" data-testid="group-by-class" />
+    Group by class
+  </label>
+  <span class="spacer"></span>
+  <span class="info">{{ devInfo() }}</span>
+  <button (click)="exportHar(false)" title="Export visible requests as HAR (masked)" data-testid="export-har">Export HAR</button>
+  <button (click)="exportHar(true)" title="Export visible requests as HAR without masking">Export unmasked</button>
+</header>
+
+<div class="filterbar">
+  <div class="filter">
+    <input
+      placeholder="Filter  (e.g. api -health method:POST status-code:404 component:Cart /regex/)"
+      [value]="store.filterText()"
+      (input)="store.filterText.set($any($event.target).value); suggestIndex.set(0)"
+      (keydown)="onFilterKey($event)"
+      (focus)="filterFocused.set(true)"
+      (blur)="filterFocused.set(false)"
+      data-testid="filter"
+      spellcheck="false"
+    />
+    @if (filterFocused() && suggestions().length) {
+      <ul class="suggestions">
+        @for (s of suggestions(); track s) {
+          <li [class.active]="$index === suggestIndex()" (mousedown)="$event.preventDefault(); applySuggestion(s)">{{ s }}</li>
+        }
+      </ul>
+    }
+  </div>
+  <label><input type="checkbox" [checked]="store.invert()" (change)="store.invert.set(!store.invert())" /> Invert</label>
+  <span class="sep"></span>
+  <button class="chip" [class.active]="!store.types().length" (click)="store.types.set([])">All</button>
+  @for (c of typeChips; track c.id) {
+    <button class="chip" [class.active]="store.types().includes(c.id)" (click)="store.toggleChip(store.types, c.id)">{{ c.label }}</button>
+  }
+  <span class="sep"></span>
+  @for (c of statusChips; track c) {
+    <button
+      class="chip"
+      [class.active]="store.statuses().includes(c)"
+      (click)="store.toggleChip(store.statuses, c)"
+      [attr.data-testid]="'chip-' + c"
+    >
+      {{ c === 'failed' ? 'Failed' : c }}
+    </button>
+  }
+</div>
+
+@if (statusMessage(); as message) {
+  <div class="notice" data-testid="notice">{{ message }}</div>
+}
+
+<main [class.with-detail]="store.selectedRequest()">
+  <aside class="tree-pane">
+    <app-component-tree />
+  </aside>
+  <section class="table-pane">
+    <app-request-table />
+  </section>
+  @if (store.selectedRequest()) {
+    <section class="detail-pane">
+      <app-request-detail />
+    </section>
+  }
+</main>
+
+<footer class="statusbar">
+  {{ store.visibleRequests().length }} / {{ store.requests().length }} requests
+  @if (store.paused()) {
+    · <span class="paused">recording paused</span>
+  }
+  @if (!store.connected()) {
+    · disconnected
+  }
+</footer>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Angular API Inspector options</title>
+    <style>
+      body { font: 13px system-ui, sans-serif; max-width: 640px; margin: 24px auto; padding: 0 16px; }
+      h2 { font-size: 15px; margin-top: 28px; }
+      textarea { width: 100%; height: 120px; font-family: monospace; }
+      input { width: 60%; }
+      li { margin: 4px 0; }
+      #message { color: #1a73e8; }
+    </style>
+  </head>
+  <body>
+    <h1>Angular API Inspector</h1>
+    <p>The hook runs on <code>localhost</code>, <code>127.0.0.1</code> and <code>*.localhost</code>. Add other dev or staging origins here.</p>
+    <h2>Extra origins</h2>
+    <ul id="origins"></ul>
+    <form id="add-origin">
+      <input id="origin" placeholder="https://staging.example.com" />
+      <button>Add origin</button>
+    </form>
+    <h2>Masked headers</h2>
+    <p>One header name per line. Names matching <code>token|secret|api-key</code> are always masked.</p>
+    <form id="masking">
+      <textarea id="headers"></textarea>
+      <button>Save</button>
+      <button type="button" id="reset-headers">Reset to defaults</button>
+    </form>
+    <p id="message"></p>
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -1,0 +1,106 @@
+:host {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  height: 100vh;
+}
+.toolbar,
+.filterbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  background: var(--toolbar);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.spacer {
+  flex: 1;
+}
+.sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+}
+.info {
+  color: var(--muted);
+}
+.record {
+  color: var(--muted);
+}
+.record.on {
+  color: var(--error);
+}
+.filter {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+}
+.filter input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.suggestions {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  left: 0;
+  margin: 0;
+  padding: 2px 0;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+  font-family: var(--mono);
+}
+.suggestions li {
+  padding: 1px 10px;
+  cursor: pointer;
+}
+.suggestions li.active {
+  background: var(--selected);
+}
+.chip {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  padding: 0 8px;
+  color: var(--fg);
+}
+.chip.active {
+  background: var(--selected);
+  border-color: var(--accent);
+}
+.notice {
+  padding: 4px 10px;
+  background: var(--notice);
+  border-bottom: 1px solid var(--border);
+}
+main {
+  display: grid;
+  grid-template-columns: minmax(180px, 22%) 1fr;
+  min-height: 0;
+}
+main.with-detail {
+  grid-template-columns: minmax(180px, 22%) minmax(240px, 1fr) minmax(320px, 45%);
+}
+.tree-pane,
+.table-pane,
+.detail-pane {
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.tree-pane,
+.table-pane {
+  border-right: 1px solid var(--border);
+}
+.statusbar {
+  padding: 2px 8px;
+  border-top: 1px solid var(--border);
+  background: var(--toolbar);
+  color: var(--muted);
+}
+.paused {
+  color: var(--warn);
+}

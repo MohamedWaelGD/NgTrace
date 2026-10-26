@@ -1,0 +1,94 @@
+/* Mirrors the DevTools Network panel: compact rows, monospace URLs, DevTools colors. */
+:root {
+  --bg: #fff;
+  --fg: #1f1f1f;
+  --muted: #5f6368;
+  --toolbar: #f1f3f4;
+  --border: #d0d0d0;
+  --row-border: #f0f0f0;
+  --hover: #eef3fd;
+  --selected: #d3e3fd;
+  --accent: #1a73e8;
+  --badge: #e8eaed;
+  --notice: #fef7e0;
+  --error: #d93025;
+  --warn: #b06000;
+  --ok: #188038;
+  --tag: #881280;
+  --key: #881391;
+  --string: #c41a16;
+  --number: #1a1aa6;
+  --mono: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+  color-scheme: light;
+}
+:root.dark {
+  --bg: #202124;
+  --fg: #e3e3e3;
+  --muted: #9aa0a6;
+  --toolbar: #292a2d;
+  --border: #474747;
+  --row-border: #2f3033;
+  --hover: #2e3a4d;
+  --selected: #0e3a6b;
+  --accent: #8ab4f8;
+  --badge: #3c4043;
+  --notice: #42381c;
+  --error: #f28b82;
+  --warn: #fdd663;
+  --ok: #81c995;
+  --tag: #5db0d7;
+  --key: #9a7fd5;
+  --string: #f28b82;
+  --number: #9980ff;
+  color-scheme: dark;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font: 12px system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+button {
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 6px;
+  cursor: pointer;
+}
+button:hover {
+  background: var(--hover);
+}
+button.icon {
+  border: none;
+  font-size: 14px;
+  padding: 0 4px;
+}
+input {
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 2px 4px;
+}
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.pane-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 8px;
+  background: var(--toolbar);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.mono {
+  font-family: var(--mono);
+}
