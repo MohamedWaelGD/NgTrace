@@ -60,6 +60,22 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
                 <div class="kv"><span>Error</span><span class="error">{{ r.error }}</span></div>
               }
               <div class="kv"><span>Type</span><span>{{ typeLabel(r) }}</span></div>
+              @if (store.retryChains().get(r.id); as chain) {
+                <div class="kv" data-testid="retry-chain">
+                  <span>Retry chain</span>
+                  <span>
+                    @for (a of chain.attempts; track a.id) {
+                      <a href="" [class.current]="a.id === r.id" (click)="$event.preventDefault(); store.selectRequest(a)" data-testid="retry-attempt">Attempt {{ a.attempt ?? $index + 1 }} ({{ statusLabel(a) }})</a>
+                      @if (!$last) {
+                        →
+                      }
+                    }
+                    @if (chain.recovered) {
+                      <span class="ok"> · recovered</span>
+                    }
+                  </span>
+                </div>
+              }
             </section>
             <section>
               <h4>Response Headers ({{ r.responseHeaders.length }})</h4>
@@ -194,6 +210,9 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
     .kv:hover .copy-header, .copy-header:focus-visible { visibility: visible; }
     .muted { color: var(--muted); }
     .error { color: var(--error); }
+    .ok { color: var(--ok); }
+    a { color: var(--accent); }
+    a.current { font-weight: 600; text-decoration: none; color: var(--fg); }
     pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
     .tag { color: var(--tag); }
     .conf-context { color: var(--ok); }

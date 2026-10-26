@@ -1,6 +1,6 @@
 # Hook: tag HttpClient observables and number attempts
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 01
 
 ## What
@@ -8,3 +8,6 @@ In `AngularInternals.patchHttpClient`, give each wrapped observable an id and co
 
 ## Acceptance
 Unit test with a fake Observable: `retry(2)` against a failing backend gives attempts 1–3 linked to the first; two independent subscriptions give two attempt-1 requests. Demo: add a flaky endpoint and a service using `retry(2)`; e2e asserts `Attempt 2` and `Recovered`.
+
+## Comments
+2026-10-26: Implemented (AngularInternals.patchHttpClient numbers subscriptions; claimAttempt tags the first recorded request; demo /errors with FlakyService retry(2) and /api/flaky; angular-internals.test.ts, e2e/errors.spec.ts).

@@ -3,7 +3,7 @@ import { expect, test } from './fixtures';
 
 const rows = (panel: Page) => panel.getByTestId('request-row');
 const row = (panel: Page, name: string) =>
-  rows(panel).filter({ has: panel.locator('td.name', { hasText: new RegExp(`^\\s*(Mocked)?\\s*${name}\\s*$`) }) }).first();
+  rows(panel).filter({ has: panel.locator('td.name .url', { hasText: new RegExp(`^\\s*(Mocked)?\\s*${name}\\s*$`) }) }).first();
 
 interface RuleInput {
   pattern: string;

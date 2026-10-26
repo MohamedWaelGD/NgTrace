@@ -4,7 +4,7 @@ import { DEMO_ZONELESS, expect, test } from './fixtures';
 const rows = (panel: Page) => panel.getByTestId('request-row');
 
 async function initiatorOf(panel: Page, name: string): Promise<string> {
-  await rows(panel).filter({ has: panel.locator('td.name', { hasText: new RegExp(`^${name.replace(/[?.]/g, '\\$&')}$`) }) }).first().click();
+  await rows(panel).filter({ has: panel.locator('td.name .url', { hasText: new RegExp(`^${name.replace(/[?.]/g, '\\$&')}$`) }) }).first().click();
   await panel.getByTestId('tab-initiator').click();
   return (await panel.getByTestId('initiator').innerText()).replace(/\s+/g, ' ');
 }

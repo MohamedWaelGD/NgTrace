@@ -148,6 +148,8 @@ function start(): void {
         transport,
       };
       const { attribution, httpClient } = attribute({ ...input, registry });
+      // Attempt Number / Retry of the HttpClient observable being subscribed (a replay is never a Retry).
+      const attempt = extra?.replayOf ? null : internals.claimAttempt(id);
       const record: CapturedRequest = {
         id,
         transport,
@@ -164,6 +166,7 @@ function start(): void {
         endTime: null,
         attribution,
         enrichment: null,
+        ...attempt,
         ...extra,
       };
       requests.set(id, record);

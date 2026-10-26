@@ -4,7 +4,7 @@ import { expect, test } from './fixtures';
 const rows = (panel: Page) => panel.getByTestId('request-row');
 
 async function selectRequest(panel: Page, name: string): Promise<void> {
-  await rows(panel).filter({ has: panel.locator('td.name', { hasText: new RegExp(`^\\s*${name}\\s*$`) }) }).first().click();
+  await rows(panel).filter({ has: panel.locator('td.name .url', { hasText: new RegExp(`^\\s*${name}\\s*$`) }) }).first().click();
 }
 
 async function captureClipboard(panel: Page): Promise<() => Promise<string[]>> {

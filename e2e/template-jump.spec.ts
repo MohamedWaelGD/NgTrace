@@ -5,7 +5,7 @@ const rows = (panel: Page) => panel.getByTestId('request-row');
 
 /** Selects the request row whose Name cell is exactly `name` and opens its Initiator tab. */
 async function openInitiator(panel: Page, name: string): Promise<void> {
-  await rows(panel).filter({ has: panel.locator('td.name', { hasText: new RegExp(`^${name.replace(/[?.]/g, '\\$&')}$`) }) }).first().click();
+  await rows(panel).filter({ has: panel.locator('td.name .url', { hasText: new RegExp(`^${name.replace(/[?.]/g, '\\$&')}$`) }) }).first().click();
   await panel.getByTestId('tab-initiator').click();
 }
 

@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
-const rowNames = (panel: Page) => panel.getByTestId('request-row').locator('td.name').allInnerTexts();
+const rowNames = (panel: Page) => panel.getByTestId('request-row').locator('td.name .url').allInnerTexts();
 
 async function loadAll(openInspector: (path?: string) => Promise<{ app: Page; panel: Page }>) {
   const { app, panel } = await openInspector();

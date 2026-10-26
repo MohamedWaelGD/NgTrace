@@ -10,6 +10,9 @@ import {
   REVEAL_GLOBAL,
   detectWaste,
   groupReplays,
+  isFailed,
+  retryChains,
+  summariseFailures,
   matchRule,
   type MockRule,
   type ReplaySpec,
@@ -46,6 +49,8 @@ export interface TreeRow {
   node: TreeNode;
   depth: number;
   count: number;
+  /** Failed Requests among its own requests. */
+  failed: number;
   hasChildren: boolean;
 }
 
@@ -84,6 +89,9 @@ export class InspectorStore {
   /** Skip the confirmation before replaying side-effecting requests (this session only, never saved). */
   readonly skipReplayConfirm = signal(false);
   readonly showWasteSummary = signal(false);
+  /** Show only Failed Requests (table and Timeline). */
+  readonly failedOnly = signal(false);
+  readonly showFailureSummary = signal(false);
   readonly viewMode = signal<'table' | 'timeline'>('table');
 
   // Mock Rules (ADR 8): saved per origin, armed in the hook only while this panel keeps sending them.
@@ -165,6 +173,9 @@ export class InspectorStore {
   /** Waste Signals per request id, over everything the panel holds. */
   readonly waste = computed(() => detectWaste(this.requests(), this.duplicateWindowMs()));
   readonly wasteSummary = computed(() => summariseWaste(this.requests(), this.waste()));
+  /** Retry chains keyed by every attempt's id. */
+  readonly retryChains = computed(() => retryChains(this.requests()));
+  readonly failureSummary = computed(() => summariseFailures(this.requests()));
 
   readonly selectedRequest = computed(() => this.requests().find((r) => r.id === this.selectedRequestId()) ?? null);
   readonly selectedNode = computed(() => this.tree().find((n) => n.id === this.selectedNodeId()) ?? null);
@@ -185,12 +196,16 @@ export class InspectorStore {
     return map;
   });
 
-  /** Request counts per Instance Id (own requests only). */
+  /** Request and Failed Request counts per Instance Id (own requests only). */
   private readonly ownCounts = computed(() => {
-    const counts = new Map<number, number>();
+    const counts = new Map<number, { all: number; failed: number }>();
     for (const r of this.currentPageRequests()) {
       const id = r.attribution.instanceId;
-      if (id !== null) counts.set(id, (counts.get(id) ?? 0) + 1);
+      if (id === null) continue;
+      const c = counts.get(id) ?? { all: 0, failed: 0 };
+      c.all++;
+      if (isFailed(r)) c.failed++;
+      counts.set(id, c);
     }
     return counts;
   });
@@ -216,7 +231,8 @@ export class InspectorStore {
     const walk = (parentId: number | null, depth: number) => {
       for (const node of children.get(parentId) ?? []) {
         const kids = children.get(node.id) ?? [];
-        rows.push({ node, depth, count: counts.get(node.id) ?? 0, hasChildren: kids.length > 0 });
+        const c = counts.get(node.id);
+        rows.push({ node, depth, count: c?.all ?? 0, failed: c?.failed ?? 0, hasChildren: kids.length > 0 });
         if (!collapsed.has(node.id)) walk(node.id, depth + 1);
       }
     };
@@ -271,7 +287,8 @@ export class InspectorStore {
     });
     const waste = this.waste();
     const wasteOnly = this.wasteOnly();
-    return groupReplays(this.scopedRequests().filter((r) => filter(r) && (!wasteOnly || waste.has(r.id))));
+    const failedOnly = this.failedOnly();
+    return groupReplays(this.scopedRequests().filter((r) => filter(r) && (!wasteOnly || waste.has(r.id)) && (!failedOnly || isFailed(r))));
   });
 
   private port: chrome.runtime.Port | null = null;

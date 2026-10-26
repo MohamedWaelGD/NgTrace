@@ -57,6 +57,9 @@ import type { TreeNode } from '@ngapi/protocol';
           @if (store.pickedElement()?.id === row.node.id) {
             <span class="picked mono" data-testid="picked-from">from {{ store.pickedElement()!.element }}</span>
           }
+          @if (row.failed) {
+            <span class="badge fail" data-testid="failed-count" [title]="row.failed + ' failed request(s)'">{{ row.failed }} failed</span>
+          }
           @if (row.count) {
             <span class="badge" data-testid="badge">{{ row.count }}</span>
           }
@@ -106,6 +109,8 @@ import type { TreeNode } from '@ngapi/protocol';
     .name { color: var(--tag); font-family: var(--mono); }
     .picked { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
     .badge { margin-left: auto; background: var(--badge); color: var(--fg); border-radius: 8px; padding: 0 6px; font-size: 10px; }
+    .badge.fail { background: color-mix(in srgb, var(--error) 22%, var(--bg)); }
+    .badge.fail + .badge { margin-left: 0; }
     .empty { color: var(--muted); padding: 8px; }
     .details { flex: none; min-height: 80px; max-height: calc(100% - 90px); }
     .splitter.horizontal { width: auto; height: 4px; padding: 1px 0; cursor: row-resize; flex: none; }

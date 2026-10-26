@@ -3,7 +3,7 @@ import { expect, test } from './fixtures';
 
 /** Selects the request row whose Name cell is exactly `name` and returns its Initiator tab text. */
 async function initiatorOf(panel: Page, name: string): Promise<string> {
-  const row = panel.getByTestId('request-row').filter({ has: panel.locator('td.name', { hasText: new RegExp(`^${escape(name)}$`) }) });
+  const row = panel.getByTestId('request-row').filter({ has: panel.locator('td.name .url', { hasText: new RegExp(`^${escape(name)}$`) }) });
   await row.first().click();
   await panel.getByTestId('tab-initiator').click();
   return (await panel.getByTestId('initiator').innerText()).replace(/\s+/g, ' ');
@@ -11,7 +11,7 @@ async function initiatorOf(panel: Page, name: string): Promise<string> {
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const rows = (panel: Page) => panel.getByTestId('request-row');
-const rowNames = (panel: Page) => rows(panel).locator('td.name').allInnerTexts();
+const rowNames = (panel: Page) => rows(panel).locator('td.name .url').allInnerTexts();
 
 test.describe('attribution scenarios (demo-app)', () => {
   test('builds the component tree with one node per instance', async ({ openInspector }) => {

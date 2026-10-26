@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { formatBytes, formatDuration, ownerLabel, responseSize, shortName, statusClass, statusLabel, typeLabel } from './format';
-import { type WasteSignal } from '@ngapi/protocol';
+import { isFailed, type CapturedRequest, type WasteSignal } from '@ngapi/protocol';
 import { InspectorStore } from './inspector.store';
 
 @Component({
@@ -36,7 +36,16 @@ import { InspectorStore } from './inspector.store';
               @for (w of store.waste().get(r.id) ?? []; track w.kind) {
                 <span class="waste" data-testid="waste-badge" [title]="wasteTitle(w.kind)">{{ wasteLabel(w) }}</span>
               }
-              <span>{{ shortName(r.url) }}</span>
+              @if (isFailed(r)) {
+                <span class="failed-badge" data-testid="failed-badge" title="Failed Request: network error or status 400 and above">{{ failedLabel(r) }}</span>
+              }
+              @if ((r.attempt ?? 1) > 1) {
+                <span class="attempt-badge" data-testid="attempt-badge" title="Retry: sent again after the previous attempt failed">Attempt {{ r.attempt }}</span>
+              }
+              @if (recovered(r)) {
+                <span class="recovered-badge" data-testid="recovered-badge" title="Succeeded after earlier attempts failed">Recovered</span>
+              }
+              <span class="url">{{ shortName(r.url) }}</span>
             </td>
             <td>{{ r.method }}</td>
             <td class="status">{{ statusLabel(r) }}</td>
@@ -69,6 +78,9 @@ import { InspectorStore } from './inspector.store';
     tr.pending td { color: var(--muted); }
     .waste { background: color-mix(in srgb, var(--warn) 28%, var(--bg)); color: var(--fg); border: 1px solid color-mix(in srgb, var(--warn) 60%, transparent); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
     .mocked-badge { background: var(--tag); color: var(--bg); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
+    .failed-badge { background: color-mix(in srgb, var(--error) 22%, var(--bg)); color: var(--fg); border: 1px solid color-mix(in srgb, var(--error) 55%, transparent); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
+    .attempt-badge { background: var(--badge); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
+    .recovered-badge { background: color-mix(in srgb, var(--ok) 22%, var(--bg)); color: var(--fg); border: 1px solid color-mix(in srgb, var(--ok) 55%, transparent); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
     .replay-badge { background: var(--badge); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
     td.owner { color: var(--tag); font-family: var(--mono); }
     td.owner.weak { opacity: 0.8; }
@@ -78,6 +90,15 @@ import { InspectorStore } from './inspector.store';
 export class RequestTable {
   protected readonly store = inject(InspectorStore);
   protected readonly shortName = shortName;
+  protected readonly isFailed = isFailed;
+  protected failedLabel(r: CapturedRequest): string {
+    return r.error === null && r.status !== null ? `Failed ${r.status}` : 'Failed';
+  }
+  /** On the last attempt of a chain that ended in success. */
+  protected recovered(r: CapturedRequest): boolean {
+    const chain = this.store.retryChains().get(r.id);
+    return !!chain?.recovered && chain.attempts[chain.attempts.length - 1].id === r.id;
+  }
   protected wasteLabel(w: WasteSignal): string {
     return w.kind === 'duplicate' ? `Duplicate ×${w.count}` : 'Cancelled';
   }

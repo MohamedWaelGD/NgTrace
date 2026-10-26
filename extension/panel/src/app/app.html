@@ -70,6 +70,12 @@
   <button class="chip" [class.active]="store.showWasteSummary()" (click)="store.showWasteSummary.set(!store.showWasteSummary())" data-testid="waste-toggle" title="Waste summary by component">
     Waste ({{ store.wasteSummary().length }})
   </button>
+  <button class="chip" [class.active]="store.failedOnly()" (click)="store.failedOnly.set(!store.failedOnly())" data-testid="chip-failed-only" title="Show only failed requests (network error or status 400 and above)">
+    Failed only
+  </button>
+  <button class="chip" [class.active]="store.showFailureSummary()" (click)="store.showFailureSummary.set(!store.showFailureSummary())" data-testid="failures-toggle" title="Failures and Retries by component">
+    Failures ({{ store.failureSummary().length }})
+  </button>
   <span class="sep"></span>
   @for (c of statusChips; track c) {
     <button
@@ -96,6 +102,19 @@
       </div>
     } @empty {
       <div class="waste-row">No wasteful requests detected.</div>
+    }
+  </div>
+}
+
+@if (store.showFailureSummary()) {
+  <div class="waste-summary" data-testid="failures-summary">
+    @for (f of store.failureSummary(); track f.group) {
+      <div class="waste-row" data-testid="failure-row">
+        <span class="mono">{{ f.group }}{{ f.kind === 'service' ? ' (service)' : '' }}</span>
+        <span>{{ f.failed }} failed · {{ f.retries }} {{ f.retries === 1 ? 'retry' : 'retries' }} · {{ f.recovered }} recovered</span>
+      </div>
+    } @empty {
+      <div class="waste-row">No failed requests.</div>
     }
   </div>
 }

@@ -14,7 +14,7 @@ async function captureClipboard(panel: Page): Promise<() => Promise<string[]>> {
 }
 
 async function selectRequest(panel: Page, name: string): Promise<void> {
-  await rows(panel).filter({ has: panel.locator('td.name', { hasText: new RegExp(`^${name}$`) }) }).first().click();
+  await rows(panel).filter({ has: panel.locator('td.name .url', { hasText: new RegExp(`^${name}$`) }) }).first().click();
 }
 
 test.describe('Live Values', () => {
