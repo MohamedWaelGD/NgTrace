@@ -5,6 +5,7 @@ const originsList = $<HTMLUListElement>('origins');
 const originInput = $<HTMLInputElement>('origin');
 const headersInput = $<HTMLTextAreaElement>('headers');
 const quickCopyInput = $<HTMLTextAreaElement>('quick-copy-headers');
+const windowInput = $<HTMLInputElement>('duplicate-window');
 const message = $<HTMLParagraphElement>('message');
 
 async function render(): Promise<void> {
@@ -26,6 +27,7 @@ async function render(): Promise<void> {
   );
   headersInput.value = settings.maskedHeaders.join('\n');
   quickCopyInput.value = settings.quickCopyHeaders.join('\n');
+  windowInput.value = String(settings.duplicateWindowMs);
 }
 
 $<HTMLFormElement>('add-origin').onsubmit = async (e) => {
@@ -75,6 +77,13 @@ $<HTMLFormElement>('quick-copy').onsubmit = async (e) => {
 $<HTMLButtonElement>('reset-quick-copy').onclick = async () => {
   await chrome.storage.sync.set({ quickCopyHeaders: DEFAULT_SETTINGS.quickCopyHeaders });
   await render();
+};
+
+$<HTMLFormElement>('waste').onsubmit = async (e) => {
+  e.preventDefault();
+  const ms = Number(windowInput.value);
+  await chrome.storage.sync.set({ duplicateWindowMs: Number.isFinite(ms) && ms >= 0 ? Math.round(ms) : DEFAULT_SETTINGS.duplicateWindowMs });
+  message.textContent = 'Saved duplicate window.';
 };
 
 void render();

@@ -46,3 +46,26 @@ _Avoid_: realtime data, watch.
 **Quick-copy Header**
 A request header named in Settings (default `Authorization`) that gets a one-click copy button, both for the selected Captured Request and for the most recent Captured Request that carries it. Always copies the raw value, even when the header is masked on screen.
 _Avoid_: token copy, auth copy.
+
+**Replayed Request**
+A Captured Request that the user re-sent from the panel, optionally after editing its method, URL, headers or body. Recorded as its own Captured Request, linked to the original it came from. Never counted as a Duplicate or other Waste Signal.
+_Avoid_: retry, resend, repeat.
+
+**Mock Rule**
+A user-defined rule that matches outgoing requests by method and URL pattern, optionally narrowed to an Owner Component class, and either answers with a canned response, simulates a network error, delays the real response, or lets it through unchanged. A request answered by a rule is shown as Mocked.
+_Avoid_: stub, override, intercept.
+
+**Waste Signal**
+A flag on a Captured Request showing it was probably unnecessary: a Duplicate, or a Cancelled-then-refired request. Summarised per Owner Component.
+
+**Duplicate**
+A Captured Request with the same method, normalised URL and body as an earlier idempotent request that was still in flight or finished within the Duplicate Window.
+
+**Duplicate Window**
+How long after an earlier identical request a repeat still counts as a Duplicate. Default 1,000 ms.
+
+**Cancelled-then-refired**
+A request that was aborted and then sent again with the same method and URL shortly afterwards (typically a `switchMap` restart).
+
+**Timeline**
+The view that lays Captured Requests on a time axis, one row each, coloured by Owner Component, with navigation and Route Phase markers. An alternative to the request table, sharing its selection and filters.

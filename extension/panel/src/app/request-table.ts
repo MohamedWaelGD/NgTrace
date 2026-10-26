@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { formatBytes, formatDuration, ownerLabel, responseSize, shortName, statusClass, statusLabel, typeLabel } from './format';
+import { type WasteSignal } from '@ngapi/protocol';
 import { InspectorStore } from './inspector.store';
 
 @Component({
@@ -25,7 +26,12 @@ import { InspectorStore } from './inspector.store';
             (click)="store.selectRequest(r)"
             data-testid="request-row"
           >
-            <td class="name" [title]="r.url">{{ shortName(r.url) }}</td>
+            <td class="name" [title]="r.url">
+              @for (w of store.waste().get(r.id) ?? []; track w.kind) {
+                <span class="waste" data-testid="waste-badge" [title]="wasteTitle(w.kind)">{{ wasteLabel(w) }}</span>
+              }
+              {{ shortName(r.url) }}
+            </td>
             <td>{{ r.method }}</td>
             <td class="status">{{ statusLabel(r) }}</td>
             <td>{{ typeLabel(r) }}</td>
@@ -55,6 +61,7 @@ import { InspectorStore } from './inspector.store';
     tr.selected td { background: var(--selected); }
     tr.s-4xx td.status, tr.s-5xx td.status, tr.s-failed td { color: var(--error); }
     tr.pending td { color: var(--muted); }
+    .waste { background: var(--warn-bg, #fff3cd); color: var(--warn, #7a5c00); border-radius: 8px; padding: 0 6px; margin-right: 4px; font-size: 11px; }
     td.owner { color: var(--tag); font-family: var(--mono); }
     td.owner.weak { opacity: 0.8; }
     tr.empty td { color: var(--muted); text-align: center; padding: 16px; }
@@ -63,6 +70,14 @@ import { InspectorStore } from './inspector.store';
 export class RequestTable {
   protected readonly store = inject(InspectorStore);
   protected readonly shortName = shortName;
+  protected wasteLabel(w: WasteSignal): string {
+    return w.kind === 'duplicate' ? `Duplicate ×${w.count}` : 'Cancelled';
+  }
+  protected wasteTitle(kind: WasteSignal['kind']): string {
+    return kind === 'duplicate'
+      ? 'Same request sent again within the duplicate window'
+      : 'Aborted, then the same request was sent again';
+  }
   protected readonly statusLabel = statusLabel;
   protected readonly statusClass = statusClass;
   protected readonly typeLabel = typeLabel;

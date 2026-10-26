@@ -37,6 +37,7 @@ function api(req, res, url, body) {
     res.writeHead(200, { 'content-type': 'application/xml' });
     return res.end('<legacy ok="true"/>');
   }
+  if (path === '/api/slow') return setTimeout(() => json(res, 200, { ok: true }), 300);
   if (path === '/api/error') return json(res, 500, { error: 'boom' });
   return json(res, 404, { error: 'not found' });
 }

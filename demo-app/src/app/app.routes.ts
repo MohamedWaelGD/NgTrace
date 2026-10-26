@@ -2,10 +2,12 @@ import { Routes } from '@angular/router';
 import { ProductStore } from './api.service';
 import { ProductDetailComponent } from './product-detail.component';
 import { ShopComponent } from './shop.component';
+import { WasteComponent } from './waste.component';
 import { productResolver, StoreDetailComponent } from './store-detail.component';
 
 export const routes: Routes = [
   { path: '', component: ShopComponent },
+  { path: 'waste', component: WasteComponent },
   { path: 'products/:id', component: ProductDetailComponent },
   {
     path: 'stores/:id',

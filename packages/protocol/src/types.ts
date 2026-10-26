@@ -55,6 +55,8 @@ export interface CapturedRequest {
   startTime: number;
   endTime: number | null;
   attribution: Attribution;
+  /** Set on a Replayed Request: the id of the Captured Request it was re-sent from. */
+  replayOf?: string;
   /** Browser-level request headers from the DevTools HAR, once Enriched. */
   enrichment: { requestHeaders: Header[]; serverTiming?: number } | null;
 }

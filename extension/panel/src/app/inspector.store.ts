@@ -3,7 +3,10 @@ import {
   createMasker,
   createRequestFilter,
   DEFAULT_MASKED_HEADERS,
+  DEFAULT_DUPLICATE_WINDOW_MS,
   DEFAULT_QUICK_COPY_HEADERS,
+  detectWaste,
+  summariseWaste,
   enrich,
   type AngularStatus,
   type CapturedRequest,
@@ -65,6 +68,10 @@ export class InspectorStore {
   readonly showFramework = signal(false);
   readonly maskedHeaders = signal<string[]>(DEFAULT_MASKED_HEADERS);
   readonly quickCopyHeaders = signal<string[]>(DEFAULT_QUICK_COPY_HEADERS);
+  readonly duplicateWindowMs = signal(DEFAULT_DUPLICATE_WINDOW_MS);
+  /** Show only requests flagged with a Waste Signal. */
+  readonly wasteOnly = signal(false);
+  readonly showWasteSummary = signal(false);
 
   // Selection
   readonly selectedNodeId = signal<number | null>(null);
@@ -106,6 +113,10 @@ export class InspectorStore {
   );
 
   readonly masker = computed(() => createMasker(this.maskedHeaders()));
+
+  /** Waste Signals per request id, over everything the panel holds. */
+  readonly waste = computed(() => detectWaste(this.requests(), this.duplicateWindowMs()));
+  readonly wasteSummary = computed(() => summariseWaste(this.requests(), this.waste()));
 
   readonly selectedRequest = computed(() => this.requests().find((r) => r.id === this.selectedRequestId()) ?? null);
   readonly selectedNode = computed(() => this.tree().find((n) => n.id === this.selectedNodeId()) ?? null);
@@ -210,7 +221,9 @@ export class InspectorStore {
       types: this.types(),
       statuses: this.statuses(),
     });
-    return this.scopedRequests().filter(filter);
+    const waste = this.waste();
+    const wasteOnly = this.wasteOnly();
+    return this.scopedRequests().filter((r) => filter(r) && (!wasteOnly || waste.has(r.id)));
   });
 
   private port: chrome.runtime.Port | null = null;

@@ -35,6 +35,12 @@
       <button>Save</button>
       <button type="button" id="reset-quick-copy">Reset to defaults</button>
     </form>
+    <h2>Duplicate window</h2>
+    <p>A repeat of an identical GET or HEAD request sent within this many milliseconds of the first finishing (or while it is still in flight) is flagged as a Duplicate.</p>
+    <form id="waste">
+      <input id="duplicate-window" type="number" min="0" step="100" style="width: 8em" /> ms
+      <button>Save</button>
+    </form>
     <p id="message"></p>
     <script src="options.js"></script>
   </body>

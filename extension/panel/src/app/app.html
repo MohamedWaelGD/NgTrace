@@ -58,6 +58,13 @@
     <button class="chip" [class.active]="store.types().includes(c.id)" (click)="store.toggleChip(store.types, c.id)">{{ c.label }}</button>
   }
   <span class="sep"></span>
+  <button class="chip" [class.active]="store.wasteOnly()" (click)="store.wasteOnly.set(!store.wasteOnly())" data-testid="chip-waste" title="Show only duplicate or cancelled requests">
+    Wasteful only
+  </button>
+  <button class="chip" [class.active]="store.showWasteSummary()" (click)="store.showWasteSummary.set(!store.showWasteSummary())" data-testid="waste-toggle" title="Waste summary by component">
+    Waste ({{ store.wasteSummary().length }})
+  </button>
+  <span class="sep"></span>
   @for (c of statusChips; track c) {
     <button
       class="chip"
@@ -69,6 +76,19 @@
     </button>
   }
 </div>
+
+@if (store.showWasteSummary()) {
+  <div class="waste-summary" data-testid="waste-summary">
+    @for (w of store.wasteSummary(); track w.group) {
+      <div class="waste-row" data-testid="waste-row">
+        <span class="mono">{{ w.group }}</span>
+        <span>{{ w.duplicates }} duplicate · {{ w.cancelled }} cancelled · {{ w.wastedMs }} ms</span>
+      </div>
+    } @empty {
+      <div class="waste-row">No wasteful requests detected.</div>
+    }
+  </div>
+}
 
 @if (statusMessage(); as message) {
   <div class="notice" data-testid="notice">{{ message }}</div>

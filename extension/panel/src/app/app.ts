@@ -69,7 +69,9 @@ export class App implements OnInit {
   }
 
   private async loadSettings(): Promise<void> {
-    const stored = await chrome.storage?.sync.get(['maskedHeaders', 'quickCopyHeaders']);
+    const stored = await chrome.storage?.sync.get(['maskedHeaders', 'quickCopyHeaders', 'duplicateWindowMs']);
+    const windowMs = stored?.['duplicateWindowMs'];
+    if (typeof windowMs === 'number' && windowMs >= 0) this.store.duplicateWindowMs.set(windowMs);
     const masked = stored?.['maskedHeaders'];
     if (Array.isArray(masked)) this.store.maskedHeaders.set(masked as string[]);
     const quick = stored?.['quickCopyHeaders'];

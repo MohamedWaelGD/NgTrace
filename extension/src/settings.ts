@@ -1,4 +1,4 @@
-import { DEFAULT_MASKED_HEADERS, DEFAULT_QUICK_COPY_HEADERS } from '@ngapi/protocol';
+import { DEFAULT_DUPLICATE_WINDOW_MS, DEFAULT_MASKED_HEADERS, DEFAULT_QUICK_COPY_HEADERS } from '@ngapi/protocol';
 
 export interface Settings {
   /** Origin match patterns beyond localhost, e.g. `https://staging.example.com/*`. */
@@ -7,9 +7,11 @@ export interface Settings {
   maskedHeaders: string[];
   /** Request headers with one-click copy buttons (Quick-copy Headers). */
   quickCopyHeaders: string[];
+  /** How long after an identical GET a repeat still counts as a Duplicate (ms). */
+  duplicateWindowMs: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { extraOrigins: [], maskedHeaders: DEFAULT_MASKED_HEADERS, quickCopyHeaders: DEFAULT_QUICK_COPY_HEADERS };
+export const DEFAULT_SETTINGS: Settings = { extraOrigins: [], maskedHeaders: DEFAULT_MASKED_HEADERS, quickCopyHeaders: DEFAULT_QUICK_COPY_HEADERS, duplicateWindowMs: DEFAULT_DUPLICATE_WINDOW_MS };
 
 export async function loadSettings(): Promise<Settings> {
   const stored = (await chrome.storage.sync.get(DEFAULT_SETTINGS as unknown as Record<string, unknown>)) as Partial<Settings>;
