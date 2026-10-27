@@ -184,7 +184,7 @@ export function toHar(requests: CapturedRequest[], mask: Masker | null): Har {
     if (r.error) entry.response._error = r.error;
     return entry;
   });
-  return { log: { version: '1.2', creator: { name: 'NgTrace', version: '0.1.0' }, entries } };
+  return { log: { version: '1.2', creator: { name: 'NgTrace', version: '1.0.0' }, entries } };
 }
 
 export interface PostmanItem {
