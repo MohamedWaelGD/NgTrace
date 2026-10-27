@@ -5,6 +5,7 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const headersInput = $<HTMLTextAreaElement>('headers');
 const quickCopyInput = $<HTMLTextAreaElement>('quick-copy-headers');
 const windowInput = $<HTMLInputElement>('duplicate-window');
+const stripedInput = $<HTMLInputElement>('striped-rows');
 const message = $<HTMLParagraphElement>('message');
 const editorsList = $<HTMLUListElement>('editors');
 const editorOrigin = $<HTMLInputElement>('editor-origin');
@@ -13,11 +14,19 @@ const editorPreset = $<HTMLSelectElement>('editor-preset');
 const editorTemplate = $<HTMLInputElement>('editor-template');
 const editorNote = $<HTMLParagraphElement>('editor-note');
 
+// The message is a toast: it clears itself a few seconds after the last change.
+let messageTimer: ReturnType<typeof setTimeout> | undefined;
+new MutationObserver(() => {
+  clearTimeout(messageTimer);
+  if (message.textContent) messageTimer = setTimeout(() => (message.textContent = ''), 3000);
+}).observe(message, { childList: true, characterData: true, subtree: true });
+
 async function render(): Promise<void> {
   const settings = await loadSettings();
   headersInput.value = settings.maskedHeaders.join('\n');
   quickCopyInput.value = settings.quickCopyHeaders.join('\n');
   windowInput.value = String(settings.duplicateWindowMs);
+  stripedInput.checked = settings.stripedRows;
 }
 
 const headerNames = (text: string) =>
@@ -54,6 +63,11 @@ $<HTMLFormElement>('waste').onsubmit = async (e) => {
   const ms = Number(windowInput.value);
   await chrome.storage.sync.set({ duplicateWindowMs: Number.isFinite(ms) && ms >= 0 ? Math.round(ms) : DEFAULT_SETTINGS.duplicateWindowMs });
   message.textContent = 'Saved duplicate window.';
+};
+
+stripedInput.onchange = async () => {
+  await chrome.storage.sync.set({ stripedRows: stripedInput.checked });
+  message.textContent = `Striped rows ${stripedInput.checked ? 'on' : 'off'}.`;
 };
 
 editorPreset.replaceChildren(...EDITOR_PRESETS.map((p) => new Option(p.label, p.id)));

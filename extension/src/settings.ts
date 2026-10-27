@@ -7,9 +7,16 @@ export interface Settings {
   quickCopyHeaders: string[];
   /** How long after an identical GET a repeat still counts as a Duplicate (ms). */
   duplicateWindowMs: number;
+  /** Alternating row backgrounds in the request table and the component tree. */
+  stripedRows: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { maskedHeaders: DEFAULT_MASKED_HEADERS, quickCopyHeaders: DEFAULT_QUICK_COPY_HEADERS, duplicateWindowMs: DEFAULT_DUPLICATE_WINDOW_MS };
+export const DEFAULT_SETTINGS: Settings = {
+  maskedHeaders: DEFAULT_MASKED_HEADERS,
+  quickCopyHeaders: DEFAULT_QUICK_COPY_HEADERS,
+  duplicateWindowMs: DEFAULT_DUPLICATE_WINDOW_MS,
+  stripedRows: true,
+};
 
 export async function loadSettings(): Promise<Settings> {
   const stored = (await chrome.storage.sync.get(DEFAULT_SETTINGS as unknown as Record<string, unknown>)) as Partial<Settings>;

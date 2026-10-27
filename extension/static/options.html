@@ -2,54 +2,154 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Angular API Inspector options</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Angular API Inspector settings</title>
     <style>
-      body { font: 13px system-ui, sans-serif; max-width: 640px; margin: 24px auto; padding: 0 16px; }
-      h2 { font-size: 15px; margin-top: 28px; }
-      textarea { width: 100%; height: 120px; font-family: monospace; }
-      input { width: 60%; }
-      li { margin: 4px 0; }
-      #message { color: #1a73e8; }
-      .note { color: #5f6368; }
+      :root {
+        --bg: #f6f7f9;
+        --card: #fff;
+        --fg: #1f2328;
+        --muted: #5f6672;
+        --border: #dde1e6;
+        --accent: #1a73e8;
+        --accent-fg: #fff;
+        --input: #fff;
+        --ok: #188038;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #17181a;
+          --card: #202124;
+          --fg: #e6e8eb;
+          --muted: #9aa0a6;
+          --border: #3a3c40;
+          --accent: #8ab4f8;
+          --accent-fg: #11233d;
+          --input: #17181a;
+          --ok: #81c995;
+        }
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif; }
+      header.top { padding: 28px 24px 8px; max-width: 920px; margin: 0 auto; }
+      header.top h1 { margin: 0; font-size: 22px; }
+      header.top p { margin: 4px 0 0; color: var(--muted); }
+      .layout { display: grid; grid-template-columns: 180px 1fr; gap: 24px; max-width: 920px; margin: 0 auto; padding: 16px 24px 80px; }
+      nav { position: sticky; top: 16px; align-self: start; display: flex; flex-direction: column; gap: 2px; }
+      nav a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
+      nav a:hover { background: var(--card); color: var(--fg); }
+      main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+      section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; scroll-margin-top: 16px; }
+      h2 { margin: 0 0 4px; font-size: 16px; }
+      section > p { margin: 0 0 12px; color: var(--muted); }
+      code { background: color-mix(in srgb, var(--muted) 18%, transparent); border-radius: 4px; padding: 0 4px; font-size: 12.5px; }
+      textarea, input[type='text'], input[type='number'], input:not([type]), select {
+        width: 100%; font: inherit; color: var(--fg); background: var(--input); border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px;
+      }
+      textarea { height: 120px; font-family: Consolas, Menlo, monospace; font-size: 13px; resize: vertical; }
+      input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+      input[type='number'] { width: 8em; }
+      input[type='checkbox'] { width: 16px; height: 16px; accent-color: var(--accent); }
+      label.check { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+      .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+      .field > span { font-weight: 600; font-size: 13px; }
+      .row { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+      .inline { display: flex; align-items: center; gap: 8px; }
+      button { font: inherit; border: 1px solid var(--border); background: transparent; color: var(--fg); border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+      button:hover { background: color-mix(in srgb, var(--muted) 14%, transparent); }
+      button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+      button.primary:hover { filter: brightness(1.08); }
+      ul#editors { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+      ul#editors:empty { display: none; }
+      ul#editors li { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; word-break: break-all; }
+      ul#editors li button { margin-left: auto; padding: 3px 10px; }
+      ul#editors li button + button { margin-left: 0; }
+      .note { color: var(--muted); margin: 0; }
+      #message { position: fixed; right: 20px; bottom: 20px; background: var(--fg); color: var(--bg); border-radius: 8px; padding: 8px 14px; box-shadow: 0 4px 14px rgb(0 0 0 / 25%); }
+      #message:empty { display: none; }
+      @media (max-width: 680px) {
+        .layout { grid-template-columns: 1fr; }
+        nav { position: static; flex-direction: row; flex-wrap: wrap; }
+      }
     </style>
   </head>
   <body>
-    <h1>Angular API Inspector</h1>
-    <p>The hook runs on every <code>http</code> and <code>https</code> page.</p>
-    <h2>Masked headers</h2>
-    <p>One header name per line. Names matching <code>token|secret|api-key</code> are always masked. Masking applies on screen, to Copy as cURL / fetch and to HAR export; copying a single header copies its real value.</p>
-    <form id="masking">
-      <textarea id="headers"></textarea>
-      <button>Save</button>
-      <button type="button" id="reset-headers">Reset to defaults</button>
-    </form>
-    <h2>Quick-copy headers</h2>
-    <p>One request header name per line. Each gets a one-click copy button in the request details and in the toolbar (from the latest request that has it).</p>
-    <form id="quick-copy">
-      <textarea id="quick-copy-headers"></textarea>
-      <button>Save</button>
-      <button type="button" id="reset-quick-copy">Reset to defaults</button>
-    </form>
-    <h2>Duplicate window</h2>
-    <p>A repeat of an identical GET or HEAD request sent within this many milliseconds of the first finishing (or while it is still in flight) is flagged as a Duplicate.</p>
-    <form id="waste">
-      <input id="duplicate-window" type="number" min="0" step="100" style="width: 8em" /> ms
-      <button>Save</button>
-    </form>
-    <h2>Open in editor</h2>
-    <p>Per origin: the absolute path of the workspace the app is built from (component source paths are relative to it) and the editor to open. "Open in editor" is hidden for origins without a project root.</p>
-    <ul id="editors"></ul>
-    <form id="editor">
-      <p><label>Origin <input id="editor-origin" placeholder="http://localhost:4200" /></label></p>
-      <p><label>Project root <input id="editor-root" placeholder="C:\work\shop or /home/me/shop" /></label></p>
-      <p>
-        <label>Editor <select id="editor-preset"></select></label>
-        <input id="editor-template" placeholder="myeditor://open?file={root}/{file}&amp;line={line}&amp;column={column}" hidden />
-      </p>
-      <p id="editor-note" class="note"></p>
-      <button>Save</button>
-    </form>
-    <p id="message"></p>
+    <header class="top">
+      <h1>Angular API Inspector</h1>
+      <p>Settings apply to the DevTools panel straight away. The page hook runs on every <code>http</code> and <code>https</code> page.</p>
+    </header>
+    <div class="layout">
+      <nav aria-label="Sections">
+        <a href="#appearance-section">Appearance</a>
+        <a href="#masking-section">Masked headers</a>
+        <a href="#quick-copy-section">Quick-copy headers</a>
+        <a href="#waste-section">Duplicate window</a>
+        <a href="#editor-section">Open in editor</a>
+      </nav>
+      <main>
+        <section id="appearance-section">
+          <h2>Appearance</h2>
+          <p>How the request table and the component tree look.</p>
+          <form id="appearance">
+            <label class="check"><input id="striped-rows" type="checkbox" /> Striped rows in the request table and the component tree</label>
+          </form>
+        </section>
+
+        <section id="masking-section">
+          <h2>Masked headers</h2>
+          <p>One header name per line. Names matching <code>token|secret|api-key</code> are always masked. Masking applies on screen, to Copy as cURL / fetch and to HAR export; copying a single header copies its real value.</p>
+          <form id="masking">
+            <textarea id="headers" spellcheck="false" aria-label="Masked headers"></textarea>
+            <div class="row">
+              <button class="primary">Save</button>
+              <button type="button" id="reset-headers">Reset to defaults</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="quick-copy-section">
+          <h2>Quick-copy headers</h2>
+          <p>One request header name per line. Each gets a one-click entry in the request's Copy menu and in the toolbar (from the latest request that has it).</p>
+          <form id="quick-copy">
+            <textarea id="quick-copy-headers" spellcheck="false" aria-label="Quick-copy headers"></textarea>
+            <div class="row">
+              <button class="primary">Save</button>
+              <button type="button" id="reset-quick-copy">Reset to defaults</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="waste-section">
+          <h2>Duplicate window</h2>
+          <p>A repeat of an identical GET or HEAD request sent within this many milliseconds of the first finishing (or while it is still in flight) is flagged as a Duplicate.</p>
+          <form id="waste">
+            <div class="inline">
+              <input id="duplicate-window" type="number" min="0" step="100" aria-label="Duplicate window in milliseconds" /> ms
+              <button class="primary">Save</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="editor-section">
+          <h2>Open in editor</h2>
+          <p>Per origin: the absolute path of the workspace the app is built from (component source paths are relative to it) and the editor to open. "Open in editor" is hidden for origins without a project root.</p>
+          <ul id="editors"></ul>
+          <form id="editor">
+            <label class="field"><span>Origin</span><input id="editor-origin" placeholder="http://localhost:4200" /></label>
+            <label class="field"><span>Project root</span><input id="editor-root" placeholder="C:\work\shop or /home/me/shop" /></label>
+            <label class="field">
+              <span>Editor</span>
+              <select id="editor-preset"></select>
+            </label>
+            <input id="editor-template" placeholder="myeditor://open?file={root}/{file}&amp;line={line}&amp;column={column}" hidden />
+            <p id="editor-note" class="note"></p>
+            <div class="row"><button class="primary">Save</button></div>
+          </form>
+        </section>
+      </main>
+    </div>
+    <p id="message" role="status"></p>
     <script src="options.js"></script>
   </body>
 </html>
