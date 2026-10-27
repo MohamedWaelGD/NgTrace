@@ -1,5 +1,5 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
-import { editorTemplate, editorUrl, sourceUrlCandidates, type TreeNode } from '@ngapi/protocol';
+import { editorTemplate, editorUrl, sourceUrlCandidates, type TreeNode } from '@ngtrace/protocol';
 import { copyText } from './clipboard';
 import { openResource } from './devtools';
 import { InspectorStore, originOf } from './inspector.store';

@@ -1,4 +1,4 @@
-import { diffRequests, type InterceptorStep, type RequestSnapshot } from '@ngapi/protocol';
+import { diffRequests, type InterceptorStep, type RequestSnapshot } from '@ngtrace/protocol';
 import type { AngularInternals, SendSlot } from './angular-internals';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

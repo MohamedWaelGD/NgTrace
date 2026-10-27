@@ -1,13 +1,13 @@
 /**
  * DevTools-only actions (Elements selection, Sources). Outside DevTools (e2e tests open the panel as
- * a page) they are recorded on `window.__ngapiDevtools` instead, so tests can assert they were issued.
+ * a page) they are recorded on `window.__ngtraceDevtools` instead, so tests can assert they were issued.
  */
 
 type Action = { kind: 'eval'; expression: string } | { kind: 'open-resource'; url: string; line: number };
 
 function record(action: Action): void {
-  const w = window as unknown as { __ngapiDevtools?: Action[] };
-  (w.__ngapiDevtools ??= []).push(action);
+  const w = window as unknown as { __ngtraceDevtools?: Action[] };
+  (w.__ngtraceDevtools ??= []).push(action);
 }
 
 /** Runs `expression` in the inspected page, with the Console's command-line API (`inspect()`...). */

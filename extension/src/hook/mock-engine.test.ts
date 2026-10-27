@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { MockRule } from '@ngapi/protocol';
+import type { MockRule } from '@ngtrace/protocol';
 import { MockEngine } from './mock-engine';
 
 const rule = (overrides: Partial<MockRule> = {}): MockRule => ({

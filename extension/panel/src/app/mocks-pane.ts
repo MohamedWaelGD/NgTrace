@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { ruleError, type Header, type MockAction, type MockRule } from '@ngapi/protocol';
+import { ruleError, type Header, type MockAction, type MockRule } from '@ngtrace/protocol';
 import { InspectorStore } from './inspector.store';
 
 const METHODS = ['*', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'];

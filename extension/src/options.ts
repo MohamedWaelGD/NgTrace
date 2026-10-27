@@ -1,4 +1,4 @@
-import { EDITOR_PRESETS, EDITOR_SETTINGS_PREFIX, type EditorId, type EditorSettings } from '@ngapi/protocol';
+import { EDITOR_PRESETS, EDITOR_SETTINGS_PREFIX, type EditorId, type EditorSettings } from '@ngtrace/protocol';
 import { DEFAULT_SETTINGS, loadSettings } from './settings';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;

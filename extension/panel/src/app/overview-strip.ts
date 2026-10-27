@@ -1,5 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
-import { isFailed, statusOf, type CapturedRequest, type StatusChip } from '@ngapi/protocol';
+import { isFailed, statusOf, type CapturedRequest, type StatusChip } from '@ngtrace/protocol';
 import { formatBytes, formatDuration, responseSize, shortName } from './format';
 import { InspectorStore } from './inspector.store';
 

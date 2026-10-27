@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { LiveUpdate, SignalNode } from '@ngapi/protocol';
+import type { LiveUpdate, SignalNode } from '@ngtrace/protocol';
 import { LiveValues } from './live';
 
 const node = (id: string, preview: string | null, dependsOn: string[] = []): SignalNode => ({ id, kind: 'signal', label: id, preview, dependsOn });

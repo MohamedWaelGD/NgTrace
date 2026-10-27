@@ -1,6 +1,6 @@
 # Ideas and improvements
 
-Candidate features for the Angular API Inspector, grouped by theme. Terms in **bold** follow `GLOSSARY.md`.
+Candidate features for the Ngtrace, grouped by theme. Terms in **bold** follow `GLOSSARY.md`.
 
 ## Highest-value additions
 

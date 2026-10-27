@@ -15,7 +15,7 @@
     "module": "preserve",
     "strict": true,
     "paths": {
-      "@ngapi/protocol": ["./packages/protocol/src/index.ts"]
+      "@ngtrace/protocol": ["./packages/protocol/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

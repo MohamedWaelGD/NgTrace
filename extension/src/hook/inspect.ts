@@ -7,7 +7,7 @@ import {
   type SignalNode,
   type ValueEntry,
   type ValueTarget,
-} from '@ngapi/protocol';
+} from '@ngtrace/protocol';
 import { isFrameworkClass } from './attribution';
 import { InstanceRegistry } from './registry';
 import { isInternalKey, preview, type TreeScanner } from './tree';

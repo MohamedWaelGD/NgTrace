@@ -12,7 +12,7 @@ const OUTPUT_END = 7;
 const TEMPLATE_UPDATE_END = 3;
 const CHANGE_DETECTION_END = 13; // Angular 20+; older versions only report per-template updates.
 
-const OWNER_KEY = '__ngapiOwner';
+const OWNER_KEY = '__ngtraceOwner';
 
 /**
  * Tracks which component is "current": synchronously from Angular's profiler (lifecycle hooks and

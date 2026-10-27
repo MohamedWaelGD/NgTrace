@@ -1,4 +1,4 @@
-import { matchRule, type MockRule, type MockTarget } from '@ngapi/protocol';
+import { matchRule, type MockRule, type MockTarget } from '@ngtrace/protocol';
 
 /** The panel refreshes the rules every few seconds; without a refresh the panel is gone (ADR 8). */
 export const LEASE_MS = 15_000;

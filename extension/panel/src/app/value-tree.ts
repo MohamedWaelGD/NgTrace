@@ -1,5 +1,5 @@
 import { Component, computed, inject, input } from '@angular/core';
-import type { ValueEntry, ValueTarget } from '@ngapi/protocol';
+import type { ValueEntry, ValueTarget } from '@ngtrace/protocol';
 import { Twisty } from './icons';
 import { InspectorStore, targetKey } from './inspector.store';
 

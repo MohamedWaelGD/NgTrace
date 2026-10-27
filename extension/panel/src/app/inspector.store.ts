@@ -35,7 +35,7 @@ import {
   type ValueEntry,
   type SortDirection,
   type ValueTarget,
-} from '@ngapi/protocol';
+} from '@ngtrace/protocol';
 import { inspectedEval } from './devtools';
 
 /** Request table columns that can be sorted. */

@@ -10,7 +10,7 @@ async function openInitiator(panel: Page, name: string): Promise<void> {
 }
 
 /** DevTools actions the panel issued (recorded because e2e opens the panel outside DevTools). */
-const devtoolsActions = (panel: Page) => panel.evaluate(() => (window as unknown as { __ngapiDevtools?: unknown[] }).__ngapiDevtools ?? []);
+const devtoolsActions = (panel: Page) => panel.evaluate(() => (window as unknown as { __ngtraceDevtools?: unknown[] }).__ngtraceDevtools ?? []);
 
 test.describe('request-to-template jump', () => {
   test('Reveal in Elements is offered for a live owner and disabled on a Ghost Node', async ({ openInspector }) => {
@@ -20,7 +20,7 @@ test.describe('request-to-template jump', () => {
     const reveal = panel.getByTestId('initiator').getByTestId('reveal');
     await expect(reveal).toBeEnabled();
     await reveal.click();
-    await expect.poll(() => devtoolsActions(panel)).toContainEqual({ kind: 'eval', expression: 'inspect(window.__ngapi_reveal)' });
+    await expect.poll(() => devtoolsActions(panel)).toContainEqual({ kind: 'eval', expression: 'inspect(window.__ngtrace_reveal)' });
 
     await app.click('#go-product-2');
     await expect(panel.getByTestId('node-ProductListComponent')).toHaveClass(/ghost/);

@@ -1,4 +1,4 @@
-import { bodySize, statusOf, type CapturedRequest } from '@ngapi/protocol';
+import { bodySize, statusOf, type CapturedRequest } from '@ngtrace/protocol';
 
 export function shortName(url: string): string {
   try {

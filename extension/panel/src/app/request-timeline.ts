@@ -15,7 +15,7 @@ import {
   zoomViewport,
   type CapturedRequest,
   type Viewport,
-} from '@ngapi/protocol';
+} from '@ngtrace/protocol';
 import { shortName } from './format';
 import { InspectorStore } from './inspector.store';
 

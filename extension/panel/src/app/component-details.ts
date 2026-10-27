@@ -1,5 +1,5 @@
 import { Component, computed, ElementRef, inject, signal } from '@angular/core';
-import type { InjectedService, ProviderInfo, SignalNode, ValueTarget } from '@ngapi/protocol';
+import type { InjectedService, ProviderInfo, SignalNode, ValueTarget } from '@ngtrace/protocol';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { ICONS, Twisty } from './icons';
 import { HistoryScrubber } from './history-scrubber';

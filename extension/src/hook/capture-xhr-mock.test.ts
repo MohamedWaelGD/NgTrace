@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import type { CapturedRequest, MockRule } from '@ngapi/protocol';
+import type { CapturedRequest, MockRule } from '@ngtrace/protocol';
 import { installCapture, type Recorder } from './capture';
 
 const rule = (overrides: Partial<MockRule> = {}): MockRule => ({

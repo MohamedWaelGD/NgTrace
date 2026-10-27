@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
-import { bearerToken, latestHeaderValue } from '@ngapi/protocol';
+import { bearerToken, latestHeaderValue } from '@ngtrace/protocol';
 import { copyText } from './clipboard';
 import { ICONS } from './icons';
 import { InspectorStore } from './inspector.store';

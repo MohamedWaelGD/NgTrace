@@ -47,8 +47,8 @@ export const EDITOR_PRESETS: EditorPreset[] = [
 /** chrome.storage.sync key of an origin's EditorSettings: `editor:<origin>`. */
 export const EDITOR_SETTINGS_PREFIX = 'editor:';
 
-/** Window property where the hook puts the element to reveal, for `inspect(window.__ngapi_reveal)`. */
-export const REVEAL_GLOBAL = '__ngapi_reveal';
+/** Window property where the hook puts the element to reveal, for `inspect(window.__ngtrace_reveal)`. */
+export const REVEAL_GLOBAL = '__ngtrace_reveal';
 
 /** Per-origin "Open in editor" settings. */
 export interface EditorSettings {

@@ -12,7 +12,7 @@ import {
   type PanelCommand,
   type TreeNode,
   type WindowEnvelope,
-} from '@ngapi/protocol';
+} from '@ngtrace/protocol';
 import { AngularInternals } from './angular-internals';
 import { attribute, type AttributionInput } from './attribution';
 import { captureStack, installCapture, type Recorder } from './capture';
@@ -32,8 +32,8 @@ import { detectAngular, previewOptions, TreeScanner, type NgGlobals } from './tr
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const win = window as any;
 
-if (!win.__ngapiHookInstalled) {
-  win.__ngapiHookInstalled = true;
+if (!win.__ngtraceHookInstalled) {
+  win.__ngtraceHookInstalled = true;
   start();
 }
 
@@ -68,7 +68,7 @@ function start(): void {
     post({ type: 'navigation', pageId, event });
   };
 
-  const MOCK_HINT_KEY = '__ngapi_mocks';
+  const MOCK_HINT_KEY = '__ngtrace_mocks';
   const mocks = new MockEngine({
     now: () => Date.now(),
     schedule: (fn, ms) => void setTimeoutNative(fn, ms),

@@ -1,4 +1,4 @@
-import { MAX_BODY_BYTES, type Body } from '@ngapi/protocol';
+import { MAX_BODY_BYTES, type Body } from '@ngtrace/protocol';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();

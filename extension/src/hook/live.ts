@@ -1,4 +1,4 @@
-import { diffEntries, diffSignals, LiveThrottle, type InputValue, type LiveUpdate, type SignalNode, type ValueEntry, type ValueTarget } from '@ngapi/protocol';
+import { diffEntries, diffSignals, LiveThrottle, type InputValue, type LiveUpdate, type SignalNode, type ValueEntry, type ValueTarget } from '@ngtrace/protocol';
 
 export interface LiveSource {
   inputs(id: number): InputValue[];

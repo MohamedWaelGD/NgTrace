@@ -1,4 +1,4 @@
-import type { InterceptorStep } from '@ngapi/protocol';
+import type { InterceptorStep } from '@ngtrace/protocol';
 import type { RoutePhase } from './attribution';
 import { captureStack } from './capture';
 

@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { bearerToken, bodyText, headerValue, isEmptyDiff, MASK, toCurl, toFetch, type Body, type Header } from '@ngapi/protocol';
+import { bearerToken, bodyText, headerValue, isEmptyDiff, MASK, toCurl, toFetch, type Body, type Header } from '@ngtrace/protocol';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { copyText } from './clipboard';
 import { ICONS } from './icons';

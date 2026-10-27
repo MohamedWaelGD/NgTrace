@@ -5,7 +5,7 @@ import { ICONS, Twisty } from './icons';
 import { clamp, PANE_MIN, PaneLayout, Splitter } from './layout';
 import { InspectorStore, UNATTRIBUTED } from './inspector.store';
 import { SourceActions } from './source-actions';
-import type { TreeNode } from '@ngapi/protocol';
+import type { TreeNode } from '@ngtrace/protocol';
 
 @Component({
   selector: 'app-component-tree',

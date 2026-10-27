@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { CapturedRequest, MockRule } from '@ngapi/protocol';
+import type { CapturedRequest, MockRule } from '@ngtrace/protocol';
 import { installCapture, type Recorder } from './capture';
 
 type Rec = { transport: string; stack: string; data: Partial<CapturedRequest> };

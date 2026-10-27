@@ -11,7 +11,7 @@ import {
   type CapturedRequest,
   type Header,
   type ReplaySpec,
-} from '@ngapi/protocol';
+} from '@ngtrace/protocol';
 import { InspectorStore } from './inspector.store';
 
 /** Replay tab: re-send unchanged, or edit method, URL, headers and body first; then diff the new response. */

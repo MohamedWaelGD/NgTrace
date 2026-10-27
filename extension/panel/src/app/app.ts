@@ -1,5 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { FILTER_KEYS, toHar, type HarLikeEntry, type StatusChip, type TypeChip } from '@ngapi/protocol';
+import { FILTER_KEYS, toHar, type HarLikeEntry, type StatusChip, type TypeChip } from '@ngtrace/protocol';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { ComponentTree } from './component-tree';
 import { Dropdown } from './dropdown';
@@ -140,7 +140,7 @@ export class App implements OnInit {
     const blob = new Blob([JSON.stringify(har, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `angular-api-${new Date().toISOString().replace(/[:.]/g, '-')}.har`;
+    a.download = `ngtrace-${new Date().toISOString().replace(/[:.]/g, '-')}.har`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }

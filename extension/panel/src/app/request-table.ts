@@ -1,7 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { formatBytes, formatDuration, formatTimestamp, ownerLabel, responseSize, shortName, statusClass, statusLabel, typeLabel } from './format';
-import { isFailed, nextSort, sortRows, type CapturedRequest, type WasteSignal } from '@ngapi/protocol';
+import { isFailed, nextSort, sortRows, type CapturedRequest, type WasteSignal } from '@ngtrace/protocol';
 import { ICONS } from './icons';
 import { InspectorStore, type SortColumn } from './inspector.store';
 

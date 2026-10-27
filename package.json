@@ -1,5 +1,5 @@
 {
-  "name": "angular-api-inspector",
+  "name": "ngtrace",
   "version": "0.0.0",
   "scripts": {
     "build": "node scripts/build-extension.mjs",

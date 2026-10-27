@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { REVEAL_GLOBAL } from '@ngapi/protocol';
+import { REVEAL_GLOBAL } from '@ngtrace/protocol';
 import { InstanceRegistry } from './registry';
 import { revealElement } from './reveal';
 import { TreeScanner } from './tree';

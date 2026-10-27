@@ -211,7 +211,7 @@ export type PanelCommand =
   | { type: 'highlight'; id: number | null }
   | { type: 'pick'; on: boolean }
   | { type: 'get-details'; id: number }
-  /** Reveal in Elements: expose this instance's host element as `window.__ngapi_reveal`. */
+  /** Reveal in Elements: expose this instance's host element as `window.__ngtrace_reveal`. */
   | { type: 'reveal'; id: number }
   | { type: 'expand'; target: ValueTarget; path: string[] }
   | { type: 'clear' }
@@ -224,8 +224,8 @@ export type PanelCommand =
   | { type: 'live-target'; target: ValueTarget | null; paths: string[][] };
 
 /** window.postMessage envelope between the main-world hook and the content script. */
-export const HOOK_SOURCE = '__ngapi_hook__';
-export const CONTENT_SOURCE = '__ngapi_content__';
+export const HOOK_SOURCE = '__ngtrace_hook__';
+export const CONTENT_SOURCE = '__ngtrace_content__';
 export interface WindowEnvelope<T> {
   source: typeof HOOK_SOURCE | typeof CONTENT_SOURCE;
   payload: T;

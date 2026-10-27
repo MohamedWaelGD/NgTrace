@@ -1,4 +1,4 @@
-import type { Body, CapturedRequest, Header, MockRule, ReplaySpec } from '@ngapi/protocol';
+import type { Body, CapturedRequest, Header, MockRule, ReplaySpec } from '@ngtrace/protocol';
 import { isTextualMime, mimeOf, readCapped, requestBody, textBody } from './body';
 
 export type RequestPart = Pick<CapturedRequest, 'method' | 'url' | 'requestHeaders' | 'requestBody'>;

@@ -5,7 +5,7 @@ import {
   type HookMessage,
   type RuntimeMessage,
   type WindowEnvelope,
-} from '@ngapi/protocol';
+} from '@ngtrace/protocol';
 
 window.addEventListener('message', (event) => {
   const data = event.data as WindowEnvelope<HookMessage> | undefined;

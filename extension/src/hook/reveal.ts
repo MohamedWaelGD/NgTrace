@@ -1,4 +1,4 @@
-import { REVEAL_GLOBAL } from '@ngapi/protocol';
+import { REVEAL_GLOBAL } from '@ngtrace/protocol';
 import type { InstanceRegistry } from './registry';
 import type { TreeScanner } from './tree';
 

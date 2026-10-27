@@ -1,6 +1,6 @@
 import { Directive, ElementRef, Injectable, inject, output, signal } from '@angular/core';
 
-const STORAGE_KEY = 'ngapi.layout';
+const STORAGE_KEY = 'ngtrace.layout';
 
 /** Pane sizes in px; null means the CSS default (22% tree, 45% detail, 50% details). */
 export interface PaneSizes {

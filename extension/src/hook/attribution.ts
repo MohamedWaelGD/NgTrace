@@ -1,4 +1,4 @@
-import type { Attribution } from '@ngapi/protocol';
+import type { Attribution } from '@ngtrace/protocol';
 
 /** A component instance known to be "current" from the profiler (sync) or propagated across async tasks. */
 export interface OwnerRef {

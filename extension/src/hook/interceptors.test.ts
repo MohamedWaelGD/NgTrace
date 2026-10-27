@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { firstValueFrom, Observable, of, retry, type Observer } from 'rxjs';
-import type { CapturedRequest, InterceptorStep } from '@ngapi/protocol';
+import type { CapturedRequest, InterceptorStep } from '@ngtrace/protocol';
 import { AngularInternals } from './angular-internals';
 import { InterceptorTracker } from './interceptors';
 

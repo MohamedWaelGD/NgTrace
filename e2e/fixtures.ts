@@ -39,7 +39,7 @@ export const test = base.extend<Fixtures & { launched: { context: BrowserContext
   // eslint-disable-next-line no-empty-pattern
   launched: async ({}, use) => {
     const port = 9300 + Math.floor(Math.random() * 500);
-    const profile = mkdtempSync(join(tmpdir(), 'ngapi-e2e-'));
+    const profile = mkdtempSync(join(tmpdir(), 'ngtrace-e2e-'));
     const chrome: ChildProcess = spawn(chromePath, [
       `--remote-debugging-port=${port}`,
       `--user-data-dir=${profile}`,

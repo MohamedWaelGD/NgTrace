@@ -1,4 +1,4 @@
-import type { NavEvent } from '@ngapi/protocol';
+import type { NavEvent } from '@ngtrace/protocol';
 
 // Router EventType values (@angular/router, stable since v14).
 const KINDS: Record<number, NavEvent['kind']> = {

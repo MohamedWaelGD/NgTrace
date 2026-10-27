@@ -1,5 +1,5 @@
 /** Service worker: routes hook messages to the panel of the same tab, and panel commands to the tab. */
-import type { PanelCommand, RuntimeMessage } from '@ngapi/protocol';
+import type { PanelCommand, RuntimeMessage } from '@ngtrace/protocol';
 
 const panels = new Map<number, chrome.runtime.Port>();
 

@@ -1,4 +1,4 @@
-import type { AngularStatus, InputValue, TreeNode } from '@ngapi/protocol';
+import type { AngularStatus, InputValue, TreeNode } from '@ngtrace/protocol';
 import { InstanceRegistry } from './registry';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

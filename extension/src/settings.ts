@@ -1,4 +1,4 @@
-import { DEFAULT_DUPLICATE_WINDOW_MS, DEFAULT_MASKED_HEADERS, DEFAULT_QUICK_COPY_HEADERS } from '@ngapi/protocol';
+import { DEFAULT_DUPLICATE_WINDOW_MS, DEFAULT_MASKED_HEADERS, DEFAULT_QUICK_COPY_HEADERS } from '@ngtrace/protocol';
 
 export interface Settings {
   /** Header names masked on screen, in cURL / fetch copies and in HAR export (not in header copy, ADR 6). */

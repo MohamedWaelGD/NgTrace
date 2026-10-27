@@ -61,7 +61,7 @@ export class Overlay {
   private ensureBox(): HTMLDivElement {
     if (this.box?.isConnected) return this.box;
     const box = this.doc.createElement('div');
-    box.setAttribute('data-ngapi-overlay', '');
+    box.setAttribute('data-ngtrace-overlay', '');
     Object.assign(box.style, {
       position: 'fixed',
       zIndex: '2147483647',

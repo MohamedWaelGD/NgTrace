@@ -1,5 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
-import type { CapturedRequest } from '@ngapi/protocol';
+import type { CapturedRequest } from '@ngtrace/protocol';
 import { shortName } from './format';
 import { InspectorStore } from './inspector.store';
 
