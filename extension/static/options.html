@@ -98,7 +98,7 @@
 
         <section id="masking-section">
           <h2>Masked headers</h2>
-          <p>One header name per line. Names matching <code>token|secret|api-key</code> are always masked. Masking applies on screen, to Copy as cURL / fetch and to HAR export; copying a single header copies its real value.</p>
+          <p>One header name per line. Names matching <code>token|secret|api-key</code> are always masked. Masking applies on screen and to Copy as cURL / fetch, HAR, Postman and test-stub exports, which also blank the values of query parameters with such names (bodies are exported as captured); copying a single header copies its real value.</p>
           <form id="masking">
             <textarea id="headers" spellcheck="false" aria-label="Masked headers"></textarea>
             <div class="row">

@@ -1,5 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { FILTER_KEYS, toHar, type HarLikeEntry, type StatusChip, type TypeChip } from '@ngtrace/protocol';
+import { FILTER_KEYS, toCypressStub, toHar, toPlaywrightStub, toPostman, type HarLikeEntry, type StatusChip, type TypeChip } from '@ngtrace/protocol';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { ComponentTree } from './component-tree';
 import { Dropdown } from './dropdown';
@@ -136,11 +136,28 @@ export class App implements OnInit {
   }
 
   protected exportHar(unmasked: boolean): void {
-    const har = toHar(this.store.visibleRequests(), unmasked ? null : this.store.masker());
-    const blob = new Blob([JSON.stringify(har, null, 2)], { type: 'application/json' });
+    this.download(JSON.stringify(toHar(this.store.visibleRequests(), this.maskFor(unmasked)), null, 2), 'har', 'application/json');
+  }
+
+  protected exportPostman(unmasked: boolean): void {
+    this.download(JSON.stringify(toPostman(this.store.visibleRequests(), this.maskFor(unmasked)), null, 2), 'postman_collection.json', 'application/json');
+  }
+
+  protected exportStub(framework: 'playwright' | 'cypress', unmasked: boolean): void {
+    const requests = this.store.visibleRequests();
+    const mask = this.maskFor(unmasked);
+    if (framework === 'playwright') this.download(toPlaywrightStub(requests, mask), 'stub.spec.ts', 'text/plain');
+    else this.download(toCypressStub(requests, mask), 'stub.cy.ts', 'text/plain');
+  }
+
+  private maskFor(unmasked: boolean) {
+    return unmasked ? null : this.store.masker();
+  }
+
+  private download(text: string, extension: string, type: string): void {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `ngtrace-${new Date().toISOString().replace(/[:.]/g, '-')}.har`;
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = `ngtrace-${new Date().toISOString().replace(/[:.]/g, '-')}.${extension}`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }

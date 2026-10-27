@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { bearerToken, bodyText, expiredAtSend, expiryLabel, expiryState, findTokens, headerValue, isEmptyDiff, MASK, toCurl, toFetch, type Body, type Header, type Token } from '@ngtrace/protocol';
+import { bearerToken, bodyText, expiredAtSend, expiryLabel, expiryState, findTokens, headerValue, isEmptyDiff, MASK, toCurl, toCypressStub, toFetch, toPlaywrightStub, type Body, type Header, type Token } from '@ngtrace/protocol';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { copyText } from './clipboard';
 import { ICONS } from './icons';
@@ -43,6 +43,8 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
           <button (click)="copy(r.url, 'URL')" title="Copy URL"><hugeicons-icon [icon]="icons.url" [size]="14" /> URL</button>
           <button (click)="copy(curl(), 'cURL')" data-testid="copy-curl" title="Copy as cURL"><hugeicons-icon [icon]="icons.curl" [size]="14" /> cURL</button>
           <button (click)="copy(fetchCode(), 'fetch')" data-testid="copy-fetch" title="Copy as fetch"><hugeicons-icon [icon]="icons.fetch" [size]="14" /> fetch</button>
+          <button (click)="copy(playwrightStub(), 'Playwright stub')" data-testid="copy-playwright" title="Copy a Playwright route stubbing this response"><hugeicons-icon [icon]="icons.fetch" [size]="14" /> Playwright stub</button>
+          <button (click)="copy(cypressStub(), 'Cypress stub')" data-testid="copy-cypress" title="Copy a Cypress intercept stubbing this response"><hugeicons-icon [icon]="icons.fetch" [size]="14" /> Cypress stub</button>
           <button (click)="copy(responseText() ?? '', 'response')" title="Copy response"><hugeicons-icon [icon]="icons.response" [size]="14" /> Response</button>
           @for (q of quickCopies(); track q.name) {
             <button
@@ -476,6 +478,8 @@ export class RequestDetail {
   });
   protected readonly curl = computed(() => toCurl(this.store.selectedRequest()!, this.mask()));
   protected readonly fetchCode = computed(() => toFetch(this.store.selectedRequest()!, this.mask()));
+  protected readonly playwrightStub = computed(() => toPlaywrightStub([this.store.selectedRequest()!], this.mask()));
+  protected readonly cypressStub = computed(() => toCypressStub([this.store.selectedRequest()!], this.mask()));
 
   protected isMasked(h: Header, key: string): boolean {
     return !this.unmasked() && !this.revealed().has(key) && this.store.masker().isMasked(h[0]);

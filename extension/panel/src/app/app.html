@@ -31,6 +31,12 @@
     <span label class="label"><hugeicons-icon [icon]="icons.exportHar" [size]="14" /> Export</span>
     <button (click)="exportHar(false)" title="Export visible requests as HAR (masked)" data-testid="export-har"><hugeicons-icon [icon]="icons.exportHar" [size]="14" /> HAR (masked)</button>
     <button (click)="exportHar(true)" title="Export visible requests as HAR without masking" data-testid="export-har-unmasked"><hugeicons-icon [icon]="icons.unmasked" [size]="14" /> HAR (unmasked)</button>
+    <button (click)="exportPostman(false)" title="Export visible requests as a Postman collection (masked)" data-testid="export-postman"><hugeicons-icon [icon]="icons.exportHar" [size]="14" /> Postman (masked)</button>
+    <button (click)="exportPostman(true)" title="Export visible requests as a Postman collection without masking" data-testid="export-postman-unmasked"><hugeicons-icon [icon]="icons.unmasked" [size]="14" /> Postman (unmasked)</button>
+    <button (click)="exportStub('playwright', false)" title="Download a Playwright test stubbing the visible requests (masked)" data-testid="export-playwright"><hugeicons-icon [icon]="icons.exportHar" [size]="14" /> Playwright stub (masked)</button>
+    <button (click)="exportStub('playwright', true)" title="Download a Playwright test stubbing the visible requests without masking" data-testid="export-playwright-unmasked"><hugeicons-icon [icon]="icons.unmasked" [size]="14" /> Playwright stub (unmasked)</button>
+    <button (click)="exportStub('cypress', false)" title="Download a Cypress spec stubbing the visible requests (masked)" data-testid="export-cypress"><hugeicons-icon [icon]="icons.exportHar" [size]="14" /> Cypress stub (masked)</button>
+    <button (click)="exportStub('cypress', true)" title="Download a Cypress spec stubbing the visible requests without masking" data-testid="export-cypress-unmasked"><hugeicons-icon [icon]="icons.unmasked" [size]="14" /> Cypress stub (unmasked)</button>
   </app-dropdown>
   <button class="icon" (click)="openSettings()" title="Open settings in a tab" aria-label="Settings" data-testid="settings"><hugeicons-icon [icon]="icons.settings" [size]="16" /></button>
 </header>
