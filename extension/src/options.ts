@@ -139,7 +139,14 @@ const bugUrl = new URL($<HTMLAnchorElement>('report-bug').href);
 bugUrl.searchParams.set('extension-version', version);
 bugUrl.searchParams.set('browser', `${browser} on ${navigator.platform}`);
 $<HTMLAnchorElement>('report-bug').href = bugUrl.href;
+$<HTMLAnchorElement>('footer-issue').href = bugUrl.href;
 $<HTMLSpanElement>('version').textContent = `Version ${version}`;
+const mail = new URLSearchParams({
+  subject: `NgTrace ${version} feedback`,
+  body: `\n\n---\nNgTrace ${version}\n${browser} on ${navigator.platform}`,
+});
+// URLSearchParams encodes spaces as "+", which mail clients show literally.
+$<HTMLAnchorElement>('footer-mail').href = `mailto:mohamedwael.gd@gmail.com?${mail.toString().replace(/\+/g, '%20')}`;
 
 fillEditorForm('', {});
 void render();

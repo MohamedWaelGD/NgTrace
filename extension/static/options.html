@@ -70,6 +70,8 @@
       ul#editors li button { margin-left: auto; padding: 3px 10px; }
       ul#editors li button + button { margin-left: 0; }
       .note { color: var(--muted); margin: 0; }
+      .page-footer { max-width: 920px; margin: -48px auto 0; padding: 16px 24px 40px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; color: var(--muted); font-size: 13px; }
+      .page-footer a { color: var(--accent); }
       #message { position: fixed; right: 20px; bottom: 20px; background: var(--fg); color: var(--bg); border-radius: 8px; padding: 8px 14px; box-shadow: 0 4px 14px rgb(0 0 0 / 25%); }
       #message:empty { display: none; }
       @media (max-width: 680px) {
@@ -164,6 +166,14 @@
         </section>
       </main>
     </div>
+    <footer class="page-footer">
+      <span>Something not working, or an idea?</span>
+      <a id="footer-issue" href="https://github.com/MohamedWaelGD/NgTrace/issues/new?template=bug.yml" target="_blank" rel="noopener">Report an issue</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://github.com/MohamedWaelGD/NgTrace/issues" target="_blank" rel="noopener">Known issues</a>
+      <span aria-hidden="true">·</span>
+      <a id="footer-mail" href="mailto:mohamedwael.gd@gmail.com">mohamedwael.gd@gmail.com</a>
+    </footer>
     <p id="message" role="status"></p>
     <script src="options.js"></script>
   </body>
