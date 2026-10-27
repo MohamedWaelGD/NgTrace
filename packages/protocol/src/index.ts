@@ -16,3 +16,4 @@ export * from './signals';
 export * from './history';
 export * from './sort';
 export * from './jwt';
+export * from './contract';

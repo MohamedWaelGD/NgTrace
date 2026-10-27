@@ -48,6 +48,14 @@ function api(req, res, url, body) {
     const now = Math.floor(Date.now() / 1000);
     return json(res, 200, { access_token: makeJwt({ sub: 'ada', name: 'Ada', iat: now, exp: now + 3600 }), token_type: 'Bearer' });
   }
+  if ((m = /^\/api\/drift\/(\d+)$/.exec(path))) {
+    // One endpoint whose shape drifts between calls; id 4 is larger than the capture limit.
+    const id = +m[1];
+    if (id === 1) return json(res, 200, { id, price: '9.99', owner: null, note: 'x', items: [{ n: 1 }] });
+    if (id === 2) return json(res, 200, { id, price: 9.99, owner: 'ada', items: [{ n: 2 }] });
+    if (id === 3) return json(res, 200, { id, price: 12, owner: 'bob', note: 'y', items: [] });
+    return json(res, 200, { id, blob: 'x'.repeat(1_200_000) });
+  }
   if (path === '/api/me' || path === '/api/session') return json(res, 200, { name: 'Ada' });
   if (path === '/api/expired') return json(res, 401, { error: 'token expired' });
   if (path === '/api/profile') return json(res, 200, { name: 'Ada' });

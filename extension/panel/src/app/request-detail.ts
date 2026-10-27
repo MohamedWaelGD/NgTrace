@@ -8,14 +8,15 @@ import { formatBytes, formatDuration, formatTimestamp, statusLabel, typeLabel } 
 import { InspectorStore } from './inspector.store';
 import { Dropdown } from './dropdown';
 import { JsonTree } from './json-tree';
+import { RequestContract } from './request-contract';
 import { RequestReplay } from './request-replay';
 import { SourceActions } from './source-actions';
 
-type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiator' | 'interceptors' | 'tokens' | 'replay';
+type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiator' | 'interceptors' | 'tokens' | 'contract' | 'replay';
 
 @Component({
   selector: 'app-request-detail',
-  imports: [JsonTree, NgTemplateOutlet, HugeiconsIconComponent, RequestReplay, SourceActions, Dropdown],
+  imports: [JsonTree, NgTemplateOutlet, HugeiconsIconComponent, RequestContract, RequestReplay, SourceActions, Dropdown],
   template: `
     @if (store.selectedRequest(); as r) {
       <div class="tabs">
@@ -249,6 +250,9 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
               </section>
             }
           }
+          @case ('contract') {
+            <app-request-contract [request]="r" (copyTypescript)="copy($event, 'TypeScript')" />
+          }
           @case ('replay') {
             <app-request-replay [request]="r" />
           }
@@ -363,6 +367,7 @@ export class RequestDetail {
     { id: 'initiator', label: 'Initiator' },
     { id: 'interceptors', label: 'Interceptors' },
     { id: 'tokens', label: 'Tokens' },
+    { id: 'contract', label: 'Contract' },
     { id: 'replay', label: 'Replay' },
   ];
   protected readonly statusLabel = statusLabel;

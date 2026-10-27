@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { ProductStore } from './api.service';
 import { AuthComponent } from './auth.component';
+import { ContractComponent } from './contract.component';
 import { ErrorsComponent } from './errors.component';
 import { InterceptorsComponent } from './interceptors.component';
 import { ProductDetailComponent } from './product-detail.component';
@@ -13,6 +14,7 @@ export const routes: Routes = [
   { path: '', component: ShopComponent },
   { path: 'waste', component: WasteComponent },
   { path: 'auth', component: AuthComponent },
+  { path: 'contract', component: ContractComponent },
   { path: 'errors', component: ErrorsComponent },
   { path: 'resources', component: ResourcesComponent },
   { path: 'interceptors', component: InterceptorsComponent },
