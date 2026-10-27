@@ -184,7 +184,7 @@ export function toHar(requests: CapturedRequest[], mask: Masker | null): Har {
     if (r.error) entry.response._error = r.error;
     return entry;
   });
-  return { log: { version: '1.2', creator: { name: 'Ngtrace', version: '0.1.0' }, entries } };
+  return { log: { version: '1.2', creator: { name: 'NgTrace', version: '0.1.0' }, entries } };
 }
 
 export interface PostmanItem {
@@ -256,7 +256,7 @@ export function toPostman(requests: CapturedRequest[], mask: Masker | null): Pos
     folders.set(folder, [...(folders.get(folder) ?? []), item]);
   }
   return {
-    info: { name: 'Ngtrace capture', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
+    info: { name: 'NgTrace capture', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
     item: [...folders].map(([name, item]) => ({ name, item })),
   };
 }

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Ngtrace settings</title>
+    <title>NgTrace settings</title>
     <style>
       :root {
         --bg: #f6f7f9;
@@ -60,6 +60,10 @@
       button:hover { background: color-mix(in srgb, var(--muted) 14%, transparent); }
       button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
       button.primary:hover { filter: brightness(1.08); }
+      section a { color: var(--accent); }
+      a.button { color: var(--fg); text-decoration: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; }
+      a.button:hover { background: color-mix(in srgb, var(--muted) 14%, transparent); }
+      a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
       ul#editors { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
       ul#editors:empty { display: none; }
       ul#editors li { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; word-break: break-all; }
@@ -76,7 +80,7 @@
   </head>
   <body>
     <header class="top">
-      <h1>Ngtrace</h1>
+      <h1>NgTrace</h1>
       <p>Settings apply to the DevTools panel straight away. The page hook runs on every <code>http</code> and <code>https</code> page.</p>
     </header>
     <div class="layout">
@@ -86,6 +90,7 @@
         <a href="#quick-copy-section">Quick-copy headers</a>
         <a href="#waste-section">Duplicate window</a>
         <a href="#editor-section">Open in editor</a>
+        <a href="#about-section">About</a>
       </nav>
       <main>
         <section id="appearance-section">
@@ -146,6 +151,16 @@
             <p id="editor-note" class="note"></p>
             <div class="row"><button class="primary">Save</button></div>
           </form>
+        </section>
+
+        <section id="about-section">
+          <h2>About</h2>
+          <p>Captured requests stay in the page and this panel; nothing is sent anywhere. <a href="https://github.com/MohamedWaelGD/NgTrace/blob/main/PRIVACY.md" target="_blank" rel="noopener">Privacy policy</a></p>
+          <div class="row">
+            <a id="report-bug" class="button" href="https://github.com/MohamedWaelGD/NgTrace/issues/new?template=bug.yml" target="_blank" rel="noopener">Report a bug</a>
+            <a class="button" href="https://github.com/MohamedWaelGD/NgTrace" target="_blank" rel="noopener">Source code</a>
+            <span id="version" class="note"></span>
+          </div>
         </section>
       </main>
     </div>

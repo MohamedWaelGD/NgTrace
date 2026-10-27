@@ -31,7 +31,7 @@ export class BannerComponent {
   selector: 'app-root',
   imports: [RouterOutlet, RouterLink, BannerComponent, NotificationBadgeComponent],
   template: `
-    <h1>Ngtrace demo</h1>
+    <h1>NgTrace demo</h1>
     <app-banner />
     <app-notification-badge />
     <nav><a routerLink="/" id="go-shop">Shop</a> · <a routerLink="/products/2" id="go-product-2">Product 2</a> ·

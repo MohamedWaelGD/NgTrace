@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest something the panel should show or do.
+labels: [needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The debugging task or question you had, not the solution yet.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+      description: How you imagine it working in the panel, if you have an idea.
+  - type: textarea
+    id: workaround
+    attributes:
+      label: What you do today
+      description: How you work around it now (Network tab, console logging, Angular DevTools…).

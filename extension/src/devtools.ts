@@ -1,1 +1,1 @@
-chrome.devtools.panels.create('Ngtrace', 'icons/icon-32.png', 'panel/index.html');
+chrome.devtools.panels.create('NgTrace', 'icons/icon-32.png', 'panel/index.html');

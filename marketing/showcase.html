@@ -7,7 +7,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Ngtrace showcase</title>
+<title>NgTrace showcase</title>
 <script src="raw/boxes.js"></script>
 <style>
   :root {
@@ -117,13 +117,13 @@
     el.className = 'layer';
     el.innerHTML = `
       <div class="copy">
-        <span class="brand"><img src="../store/logo-1024.png" alt="" />Ngtrace <span class="dot">·</span> ${scene.kicker}</span>
+        <span class="brand"><img src="../store/logo-1024.png" alt="" />NgTrace <span class="dot">·</span> ${scene.kicker}</span>
         <h1>${scene.title}</h1>
         <p class="sub">${scene.sub}</p>
       </div>
       <div class="window" style="width:${WIN_W}px; margin-left:${-WIN_W / 2}px; top:${WIN_TOP}px">
         <div class="bar"><i></i><i></i><i></i>
-          <div class="tabs"><span>Elements</span><span>Console</span><span>Network</span><span class="on">Ngtrace</span></div>
+          <div class="tabs"><span>Elements</span><span>Console</span><span>Network</span><span class="on">NgTrace</span></div>
         </div>
         <div class="shot">
           <img src="raw/${scene.id}.png" alt="" />
@@ -147,7 +147,7 @@
     el.className = 'layer title-card';
     el.innerHTML = `
       <img src="../store/logo-1024.png" alt="" />
-      <div class="name">Ngtrace</div>
+      <div class="name">NgTrace</div>
       <div class="tag">${outro ? 'Requests by component, in DevTools.' : 'The network inspector Angular deserves.'}</div>
       ${outro ? `<div class="chips">${CHIPS.map((c) => `<span>${c}</span>`).join('')}</div>` : ''}`;
     stage.appendChild(el);

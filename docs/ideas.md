@@ -1,6 +1,6 @@
 # Ideas and improvements
 
-Candidate features for the Ngtrace, grouped by theme. Terms in **bold** follow `GLOSSARY.md`.
+Candidate features for NgTrace, grouped by theme. Terms in **bold** follow `GLOSSARY.md`.
 
 ## Highest-value additions
 

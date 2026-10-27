@@ -235,7 +235,7 @@ function WindowBar() {
         <span style={tab(false)}>Elements</span>
         <span style={tab(false)}>Console</span>
         <span style={tab(false)}>Network</span>
-        <span style={tab(true)}>Ngtrace</span>
+        <span style={tab(true)}>NgTrace</span>
       </div>
     </div>
   );
@@ -256,7 +256,7 @@ function TitleCard({ tagline, outro = false, delay = 0 }: { tagline: string; out
         }}
       />
       <Rise delay={delay + 8} distance={30}>
-        <div style={{ marginTop: 30, fontSize: 140, fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1 }}>Ngtrace</div>
+        <div style={{ marginTop: 30, fontSize: 140, fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1 }}>NgTrace</div>
       </Rise>
       <Rise delay={delay + 14}>
         <div style={{ marginTop: 20, fontSize: 42, color: PINK }}>{tagline}</div>

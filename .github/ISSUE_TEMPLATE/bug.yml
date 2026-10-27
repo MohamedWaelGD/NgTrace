@@ -1,0 +1,87 @@
+name: Bug report
+description: Something is wrong, including a request attributed to the wrong component.
+labels: [needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The *Report a bug* link in the extension's options page fills in the versions for you.
+        **Do not paste real tokens, cookies or personal data** in screenshots or logs. Security problems go through [SECURITY.md](https://github.com/MohamedWaelGD/NgTrace/security/policy), not here.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Attribution (wrong or missing Owner Component / Owner Service)
+        - Request capture (missing, duplicated or wrong request)
+        - Component tree, State or Live Values
+        - Interceptors, Retries or Value History
+        - Export or copy (cURL, fetch, HAR, Postman, test stubs)
+        - Options page
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: |
+        Steps, or a link to a small repo. For attribution bugs, the component and code that send the request help most (an `HttpClient` call in `ngOnInit`, a `resource()`, a store effect, a `setTimeout`…).
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: initiator
+    attributes:
+      label: Initiator tab
+      description: For attribution bugs, a screenshot or copy of the request's Initiator tab (confidence and Call Chain).
+  - type: input
+    id: angular-version
+    attributes:
+      label: Angular version
+      placeholder: "22.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: change-detection
+    attributes:
+      label: Change detection
+      options:
+        - zone.js
+        - Zoneless
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: build
+    attributes:
+      label: Build
+      options:
+        - Development (ng serve)
+        - Production build
+        - Other (SSR, custom builder…)
+    validations:
+      required: true
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension version
+      description: Shown at the bottom of the options page.
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Chrome 141 on Windows 11
+    validations:
+      required: true

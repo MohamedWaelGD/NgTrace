@@ -1,6 +1,6 @@
-# Ngtrace
+# NgTrace
 
-A Chromium DevTools extension that adds an **Ngtrace** panel: the Angular component tree, and for every component instance the API requests it caused, with payload, query, headers, response, and a Network-tab-style filter bar.
+A Chromium DevTools extension that adds an **NgTrace** panel: the Angular component tree, and for every component instance the API requests it caused, with payload, query, headers, response, and a Network-tab-style filter bar.
 
 See `GLOSSARY.md` for terms (Captured Request, Owner Component, Call Chain, Attribution Confidence…) and `docs/adr/` for the design decisions.
 
@@ -11,7 +11,7 @@ npm install
 npm run build
 ```
 
-Open `chrome://extensions`, enable **Developer mode**, **Load unpacked** → `dist/extension`. Open DevTools on an Angular app served in dev mode (`ng serve`) on any http(s) origin, then pick the **Ngtrace** tab.
+Open `chrome://extensions`, enable **Developer mode**, **Load unpacked** → `dist/extension`. Open DevTools on an Angular app served in dev mode (`ng serve`) on any http(s) origin, then pick the **NgTrace** tab.
 
 Requires Angular 14+ in dev mode. Production builds are detected and reported; their requests are recorded but cannot be attributed.
 
@@ -59,3 +59,7 @@ The e2e suite starts the installed Google Chrome (`E2E_CHROME` to override the p
 | `extension/panel` | The Angular panel UI |
 | `demo-app` | Angular app with one component per attribution scenario (zone + zoneless builds) |
 | `e2e` | Playwright tests and the demo API server |
+
+## License
+
+[MIT](LICENSE). The extension sends no data anywhere; see [PRIVACY.md](PRIVACY.md). Bugs and ideas: [CONTRIBUTING.md](CONTRIBUTING.md).

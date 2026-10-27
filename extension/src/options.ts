@@ -132,6 +132,15 @@ $<HTMLFormElement>('editor').onsubmit = async (e) => {
   await renderEditors();
 };
 
+// Pre-fill the bug report form's version fields (issue forms read field ids from the query string).
+const { version } = chrome.runtime.getManifest();
+const browser = navigator.userAgent.match(/(?:Edg|OPR|Chrome)\/[\d.]+/g)?.at(-1)?.replace('/', ' ') ?? navigator.userAgent;
+const bugUrl = new URL($<HTMLAnchorElement>('report-bug').href);
+bugUrl.searchParams.set('extension-version', version);
+bugUrl.searchParams.set('browser', `${browser} on ${navigator.platform}`);
+$<HTMLAnchorElement>('report-bug').href = bugUrl.href;
+$<HTMLSpanElement>('version').textContent = `Version ${version}`;
+
 fillEditorForm('', {});
 void render();
 void renderEditors();
