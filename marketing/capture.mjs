@@ -162,7 +162,9 @@ try {
       const focus = await run({ app, panel });
       await sleep(900);
       await panel.mouse.move(0, H - 1);
-      await panel.screenshot({ path: join(OUT, `${name}.png`) });
+      // Through CDP: Playwright's own screenshot ignores the 2× metrics override and saves 1×.
+      const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
+      writeFileSync(join(OUT, `${name}.png`), Buffer.from(data, 'base64'));
       const box = focus ? await panel.locator(focus).first().boundingBox() : null;
       writeFileSync(join(OUT, `${name}.json`), JSON.stringify({ width: W, height: H, focus: box }));
       console.log('ok', name);
