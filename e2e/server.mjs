@@ -19,6 +19,9 @@ const json = (res, status, body, headers = {}) => {
   res.end(JSON.stringify(body));
 };
 
+const b64url = (v) => Buffer.from(JSON.stringify(v)).toString('base64url');
+const makeJwt = (claims) => `${b64url({ alg: 'HS256', typ: 'JWT' })}.${b64url(claims)}.c2lnbmF0dXJl`;
+
 function api(req, res, url, body) {
   const path = url.pathname;
   let m;
@@ -41,6 +44,12 @@ function api(req, res, url, body) {
   }
   if (path === '/api/slow') return setTimeout(() => json(res, 200, { ok: true }), 300);
   if (path === '/api/error') return json(res, 500, { error: 'boom' });
+  if (path === '/api/login') {
+    const now = Math.floor(Date.now() / 1000);
+    return json(res, 200, { access_token: makeJwt({ sub: 'ada', name: 'Ada', iat: now, exp: now + 3600 }), token_type: 'Bearer' });
+  }
+  if (path === '/api/me' || path === '/api/session') return json(res, 200, { name: 'Ada' });
+  if (path === '/api/expired') return json(res, 401, { error: 'token expired' });
   if (path === '/api/profile') return json(res, 200, { name: 'Ada' });
   if (path === '/api/flaky' || path === '/api/unstable') {
     const id = url.searchParams.get('id') ?? '';

@@ -91,3 +91,19 @@ _Avoid_: middleware, hook.
 **Value History**
 The recent Live Values of the selected component or service, kept from the moment it was selected, with the send times of its Captured Requests marked on it, so the user can scrub back to the values just before a request fired. Cleared when another target is selected.
 _Avoid_: state log, snapshots.
+
+**Endpoint**
+A method plus a URL path with its variable segments (numeric ids, UUIDs, long hex strings) replaced by `:id`; the query string is ignored. Captured Requests to the same Endpoint are compared for Drift, so `GET /products/1` and `GET /products/2` are one Endpoint.
+_Avoid_: route (that is the Angular router's), API, URL.
+
+**Contract**
+The shape inferred from the successful (2xx) JSON responses of one Endpoint: its fields, their types, and which are optional or nullable. Bodies that were truncated or are not JSON are not used.
+_Avoid_: schema, type.
+
+**Drift**
+A field of an Endpoint's Contract whose type, presence or nullability differs between Captured Requests. An empty array is not Drift, only an unknown element type.
+_Avoid_: change, mismatch.
+
+**Token**
+A JSON Web Token found in a Captured Request: in a header (including `Bearer`), a cookie, the query string or a JSON body. Shown decoded, with its claims and an `exp` countdown; the signature is never verified.
+_Avoid_: JWT (in the UI), credential.

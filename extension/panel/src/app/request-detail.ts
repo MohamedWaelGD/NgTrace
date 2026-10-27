@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
-import { bearerToken, bodyText, headerValue, isEmptyDiff, MASK, toCurl, toFetch, type Body, type Header } from '@ngtrace/protocol';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { bearerToken, bodyText, expiredAtSend, expiryLabel, expiryState, findTokens, headerValue, isEmptyDiff, MASK, toCurl, toFetch, type Body, type Header, type Token } from '@ngtrace/protocol';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { copyText } from './clipboard';
 import { ICONS } from './icons';
@@ -11,7 +11,7 @@ import { JsonTree } from './json-tree';
 import { RequestReplay } from './request-replay';
 import { SourceActions } from './source-actions';
 
-type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiator' | 'interceptors' | 'replay';
+type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiator' | 'interceptors' | 'tokens' | 'replay';
 
 @Component({
   selector: 'app-request-detail',
@@ -23,12 +23,15 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
         @for (t of tabs; track t.id) {
           <button
             [class.active]="tab() === t.id"
-            [disabled]="t.id === 'interceptors' && !devBuild()"
-            [title]="t.id === 'interceptors' && !devBuild() ? 'Needs a development build' : ''"
+            [disabled]="(t.id === 'interceptors' && !devBuild()) || (t.id === 'tokens' && !tokens().length)"
+            [title]="t.id === 'interceptors' && !devBuild() ? 'Needs a development build' : t.id === 'tokens' && !tokens().length ? 'No JWT found in this request' : ''"
             (click)="tab.set(t.id)"
             [attr.data-testid]="'tab-' + t.id"
           >
             {{ t.label }}
+            @if (t.id === 'tokens' && tokens().length) {
+              <span class="count" data-testid="tokens-count">{{ tokens().length }}</span>
+            }
           </button>
         }
       </div>
@@ -211,6 +214,39 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
               <div class="muted">No Interceptor Steps were recorded for this request (it did not go through HttpClient, or was sent before the hook found it).</div>
             }
           }
+          @case ('tokens') {
+            <div class="muted">Decoded only: the signature is not verified.</div>
+            @for (t of tokens(); track $index) {
+              <section class="token" data-testid="token">
+                <div class="step-head">
+                  <span class="mono tag" data-testid="token-location">{{ t.location }}</span>
+                  <span class="muted">{{ t.side }}</span>
+                  @if (!tokenHidden(t, $index)) {
+                    <span [class]="'exp exp-' + expiry(t).status" data-testid="token-expiry">{{ expiryText(t) }}</span>
+                    @if (sentExpired(t)) {
+                      <span class="exp exp-expired" data-testid="token-expired-at-send">already expired when sent</span>
+                    }
+                  }
+                </div>
+                @if (tokenHidden(t, $index)) {
+                  <div class="mono masked" data-testid="token-hidden" (click)="reveal(tokenKey($index))">{{ maskText }}  (click to reveal)</div>
+                } @else {
+                  <details open>
+                    <summary>Header</summary>
+                    @for (e of entries(t.header); track e[0]) {
+                      <div class="kv"><span>{{ e[0] }}</span><span class="mono">{{ e[1] }}</span></div>
+                    }
+                  </details>
+                  <details open>
+                    <summary>Claims</summary>
+                    @for (e of entries(t.claims); track e[0]) {
+                      <div class="kv" data-testid="token-claim"><span>{{ e[0] }}</span><span class="mono">{{ e[1] }}</span></div>
+                    }
+                  </details>
+                }
+              </section>
+            }
+          }
           @case ('replay') {
             <app-request-replay [request]="r" />
           }
@@ -268,6 +304,11 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
     .tabs { display: flex; align-items: center; gap: 2px; border-bottom: 1px solid var(--border); background: var(--toolbar); padding: 0 4px; flex-wrap: wrap; }
     .tabs button { border: none; background: none; padding: 4px 8px; color: var(--fg); }
     .tabs button.active { border-bottom: 2px solid var(--accent); }
+    .count { background: var(--badge); border-radius: 8px; padding: 0 5px; font-size: 11px; margin-left: 2px; }
+    .token { border-top: 1px solid var(--border); padding: 6px 0; }
+    .exp-valid { color: var(--ok); }
+    .exp-expiring { color: var(--warn); font-weight: 600; }
+    .exp-expired { color: var(--error); }
     .actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 3px 8px; border-bottom: 1px solid var(--border); background: var(--toolbar); }
     .label { display: inline-flex; align-items: center; gap: 4px; }
     .copied { color: var(--accent); padding: 0 6px; }
@@ -319,12 +360,60 @@ export class RequestDetail {
     { id: 'timing', label: 'Timing' },
     { id: 'initiator', label: 'Initiator' },
     { id: 'interceptors', label: 'Interceptors' },
+    { id: 'tokens', label: 'Tokens' },
     { id: 'replay', label: 'Replay' },
   ];
   protected readonly statusLabel = statusLabel;
   protected readonly typeLabel = typeLabel;
   protected readonly formatBytes = formatBytes;
   protected readonly formatDuration = formatDuration;
+
+  protected readonly maskText = MASK;
+  /** Ticks once a second while the Tokens tab is open, to drive the `exp` countdown. */
+  private readonly now = signal(Date.now());
+  protected readonly tokens = computed(() => {
+    const r = this.store.selectedRequest();
+    return r ? findTokens(r) : [];
+  });
+
+  constructor() {
+    effect((onCleanup) => {
+      if (this.tab() !== 'tokens' || !this.tokens().length) return;
+      this.now.set(Date.now());
+      const id = setInterval(() => this.now.set(Date.now()), 1000);
+      onCleanup(() => clearInterval(id));
+    });
+  }
+
+  protected tokenKey(index: number): string {
+    return `${this.store.selectedRequest()!.id}:token${index}`;
+  }
+
+  /** A Token inside a masked header or cookie stays hidden until Unmasked or revealed; query and body Tokens are never masked. */
+  protected tokenHidden(t: Token, index: number): boolean {
+    return t.headerName !== null && !this.unmasked() && !this.revealed().has(this.tokenKey(index)) && this.store.masker().isMasked(t.headerName);
+  }
+
+  protected expiry(t: Token) {
+    return expiryState(t, this.now());
+  }
+
+  protected expiryText(t: Token): string {
+    return expiryLabel(this.expiry(t));
+  }
+
+  protected sentExpired(t: Token): boolean {
+    return expiredAtSend(t, this.store.selectedRequest()!);
+  }
+
+  /** Claims as rows; time claims (`exp`, `iat`, `nbf`) also show their date. */
+  protected entries(claims: Record<string, unknown>): [string, string][] {
+    return Object.entries(claims).map(([k, v]) => {
+      const text = typeof v === 'string' ? v : JSON.stringify(v);
+      const isTime = ['exp', 'iat', 'nbf'].includes(k) && typeof v === 'number';
+      return [k, isTime ? `${text}  (${new Date((v as number) * 1000).toISOString()})` : text];
+    });
+  }
 
   private readonly mask = computed(() => (this.unmasked() ? null : this.store.masker()));
   protected readonly isEmptyDiff = isEmptyDiff;

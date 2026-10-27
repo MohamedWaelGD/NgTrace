@@ -15,3 +15,4 @@ export * from './source';
 export * from './signals';
 export * from './history';
 export * from './sort';
+export * from './jwt';

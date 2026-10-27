@@ -1,0 +1,10 @@
+# Postman collection export
+
+Status: needs-triage
+Blocked by: 01
+
+## What
+Add `toPostman(requests, mask)` to `export.ts` (v2.1, folders by Owner Component, "Unattributed" folder) and "Postman (masked)" / "Postman (unmasked)" entries in the Export menu.
+
+## Acceptance
+Unit tests: folder grouping, order, headers/body/query mapping for json, text, form and no body, masking. e2e downloads a collection that parses.
