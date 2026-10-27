@@ -145,29 +145,44 @@ function detectDrift(perRequest: { id: string; paths: Map<string, Set<string>> }
   return drift;
 }
 
+type Parsed = { skip: SkipReason } | { shape: Shape; paths: Map<string, Set<string>> };
+
+/** Parsed responses by request object: the panel rebuilds a Contract on every new request, and bodies can be large. */
+const parsed = new WeakMap<CapturedRequest, Parsed>();
+
+function parseResponse(r: CapturedRequest): Parsed {
+  const cached = parsed.get(r);
+  if (cached) return cached;
+  const body = r.responseBody;
+  let result: Parsed;
+  if ((body.kind === 'json' || body.kind === 'text') && body.truncated) result = { skip: 'truncated' };
+  else {
+    try {
+      if (body.kind !== 'json') throw new Error('not json');
+      const shape = inferShape(JSON.parse(body.text));
+      result = { shape, paths: kindsByPath(shape) };
+    } catch {
+      result = { skip: 'not-json' };
+    }
+  }
+  parsed.set(r, result);
+  return result;
+}
+
 /** The Contract of one Endpoint from the buffered requests: only 2xx responses count, and only parseable, complete JSON bodies feed the shape. */
 export function buildContract(requests: CapturedRequest[], endpoint: string): Contract {
   const contract: Contract = { endpoint, shape: null, used: [], skipped: [], drift: [] };
   const perRequest: { id: string; paths: Map<string, Set<string>> }[] = [];
   for (const r of requests) {
     if (endpointOf(r) !== endpoint || r.status === null || r.status < 200 || r.status > 299) continue;
-    const body = r.responseBody;
-    if ((body.kind === 'json' || body.kind === 'text') && body.truncated) {
-      contract.skipped.push({ id: r.id, reason: 'truncated' });
+    const result = parseResponse(r);
+    if ('skip' in result) {
+      contract.skipped.push({ id: r.id, reason: result.skip });
       continue;
     }
-    let json: unknown;
-    try {
-      if (body.kind !== 'json') throw new Error('not json');
-      json = JSON.parse(body.text);
-    } catch {
-      contract.skipped.push({ id: r.id, reason: 'not-json' });
-      continue;
-    }
-    const shape = inferShape(json);
-    contract.shape = contract.shape ? mergeShapes(contract.shape, shape) : shape;
+    contract.shape = contract.shape ? mergeShapes(contract.shape, result.shape) : result.shape;
     contract.used.push(r.id);
-    perRequest.push({ id: r.id, paths: kindsByPath(shape) });
+    perRequest.push({ id: r.id, paths: result.paths });
   }
   contract.drift = detectDrift(perRequest);
   return contract;
@@ -198,6 +213,8 @@ function rootName(endpoint: string): string {
   if (!name) return 'Response';
   return /^\d/.test(name) ? `Response${name}` : name;
 }
+
+const arrayOf = (element: string) => `${element.includes(' | ') ? `(${element})` : element}[]`;
 
 /** TypeScript interfaces for a Contract. Fields seen in only some responses are optional; `null` mixed with a value becomes `| null`. */
 export function toTypeScript(contract: Contract): string {
@@ -231,8 +248,7 @@ export function toTypeScript(contract: Contract): string {
     const parts: string[] = shape.prims.filter((p) => p !== 'null');
     if (shape.object) parts.push(emitInterface(objName, shape.object));
     if (shape.array) {
-      const el = typeExpr(shape.array, elemName, elemName);
-      parts.push(`${el.includes(' | ') ? `(${el})` : el}[]`);
+      parts.push(arrayOf(typeExpr(shape.array, elemName, elemName)));
     }
     if (shape.prims.includes('null')) parts.push('null');
     return parts.length ? parts.join(' | ') : 'unknown';
@@ -243,8 +259,7 @@ export function toTypeScript(contract: Contract): string {
   const pureArray = root.array && !root.prims.length && !root.object;
   if (pureObject) emitInterface(name, root.object!);
   else if (pureArray) {
-    const el = typeExpr(root.array!, name, name);
-    blocks.push(`export type ${name}List = ${el.includes(' | ') ? `(${el})` : el}[];`);
+    blocks.push(`export type ${name}List = ${arrayOf(typeExpr(root.array!, name, name))};`);
   }
   else blocks.push(`export type ${name}Response = ${typeExpr(root, name, name)};`);
   return blocks.join('\n\n') + '\n';
