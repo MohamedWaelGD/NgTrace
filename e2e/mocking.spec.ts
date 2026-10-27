@@ -67,7 +67,7 @@ test.describe('request mocking', () => {
     const { app, panel } = await openInspector('/');
     await addRule(panel, { pattern: '/api/banner', action: 'delay', delayMs: 1200 });
     await app.reload();
-    await expect(row(panel, 'banner').locator('td.num').last()).toHaveText(/^1\.\d+ s$/, { timeout: 8000 });
+    await expect(row(panel, 'banner').locator('td.num:not(.timestamp)').last()).toHaveText(/^1\.\d+ s$/, { timeout: 8000 });
     await expect(panel.getByTestId('mocked-badge')).toHaveCount(0);
   });
 

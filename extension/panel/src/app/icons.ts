@@ -3,6 +3,7 @@ import { HugeiconsIconComponent } from '@hugeicons/angular';
 import {
   ArrowDown01Icon,
   ArrowRight01Icon,
+  ArrowUp01Icon,
   Cancel01Icon,
   CleanIcon,
   CodeIcon,
@@ -15,6 +16,7 @@ import {
   Link01Icon,
   RecordIcon,
   Refresh01Icon,
+  Settings01Icon,
   SquareUnlock01Icon,
   Unlink02Icon,
 } from '@hugeicons/core-free-icons';
@@ -26,6 +28,8 @@ export const ICONS = {
   refresh: Refresh01Icon,
   close: Cancel01Icon,
   expanded: ArrowDown01Icon,
+  sortAsc: ArrowUp01Icon,
+  settings: Settings01Icon,
   collapsed: ArrowRight01Icon,
   picker: CursorPointer01Icon,
   unattributed: Unlink02Icon,

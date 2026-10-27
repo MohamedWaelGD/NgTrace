@@ -4,8 +4,9 @@ import { bearerToken, bodyText, headerValue, isEmptyDiff, MASK, toCurl, toFetch,
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { copyText } from './clipboard';
 import { ICONS } from './icons';
-import { formatBytes, formatDuration, statusLabel, typeLabel } from './format';
+import { formatBytes, formatDuration, formatTimestamp, statusLabel, typeLabel } from './format';
 import { InspectorStore } from './inspector.store';
+import { Dropdown } from './dropdown';
 import { JsonTree } from './json-tree';
 import { RequestReplay } from './request-replay';
 import { SourceActions } from './source-actions';
@@ -14,7 +15,7 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
 
 @Component({
   selector: 'app-request-detail',
-  imports: [JsonTree, NgTemplateOutlet, HugeiconsIconComponent, RequestReplay, SourceActions],
+  imports: [JsonTree, NgTemplateOutlet, HugeiconsIconComponent, RequestReplay, SourceActions, Dropdown],
   template: `
     @if (store.selectedRequest(); as r) {
       <div class="tabs">
@@ -30,25 +31,31 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
             {{ t.label }}
           </button>
         }
-        <span class="spacer"></span>
+      </div>
+      <div class="actions">
         <label class="unmasked"><input type="checkbox" [checked]="unmasked()" (change)="unmasked.set(!unmasked())" /> Unmasked</label>
         <button (click)="store.mockFrom(r)" data-testid="mock-this" title="Create a Mock Rule from this request">Mock this request…</button>
-        <button (click)="copy(r.url, 'URL')" title="Copy URL"><hugeicons-icon [icon]="icons.url" [size]="14" /> URL</button>
-        <button (click)="copy(curl(), 'cURL')" data-testid="copy-curl" title="Copy as cURL"><hugeicons-icon [icon]="icons.curl" [size]="14" /> cURL</button>
-        <button (click)="copy(fetchCode(), 'fetch')" title="Copy as fetch"><hugeicons-icon [icon]="icons.fetch" [size]="14" /> fetch</button>
-        <button (click)="copy(responseText() ?? '', 'response')" title="Copy response"><hugeicons-icon [icon]="icons.response" [size]="14" /> Response</button>
-        @for (q of quickCopies(); track q.name) {
-          <button
-            (click)="copyHeader([q.name, q.value])"
-            [title]="'Copy the ' + q.name + ' header (raw value)'"
-            [attr.data-testid]="'quick-copy-' + q.name.toLowerCase()"
-          >
-            <hugeicons-icon [icon]="icons.key" [size]="14" /> {{ q.name }}
-          </button>
-          @if (q.token; as token) {
-            <button (click)="copy(token, store.headerCopyLabel(q.name, q.name + ' token'))" title="Copy the token without the Bearer prefix">token</button>
+        <app-dropdown title="Copy part of this request" testid="copy-menu">
+          <span label class="label"><hugeicons-icon [icon]="icons.copy" [size]="14" /> Copy</span>
+          <button (click)="copy(r.url, 'URL')" title="Copy URL"><hugeicons-icon [icon]="icons.url" [size]="14" /> URL</button>
+          <button (click)="copy(curl(), 'cURL')" data-testid="copy-curl" title="Copy as cURL"><hugeicons-icon [icon]="icons.curl" [size]="14" /> cURL</button>
+          <button (click)="copy(fetchCode(), 'fetch')" data-testid="copy-fetch" title="Copy as fetch"><hugeicons-icon [icon]="icons.fetch" [size]="14" /> fetch</button>
+          <button (click)="copy(responseText() ?? '', 'response')" title="Copy response"><hugeicons-icon [icon]="icons.response" [size]="14" /> Response</button>
+          @for (q of quickCopies(); track q.name) {
+            <button
+              (click)="copyHeader([q.name, q.value])"
+              [title]="'Copy the ' + q.name + ' header (raw value)'"
+              [attr.data-testid]="'quick-copy-' + q.name.toLowerCase()"
+            >
+              <hugeicons-icon [icon]="icons.key" [size]="14" /> {{ q.name }}
+            </button>
+            @if (q.token; as token) {
+              <button (click)="copy(token, store.headerCopyLabel(q.name, q.name + ' token'))" [attr.data-testid]="'quick-copy-token-' + q.name.toLowerCase()" title="Copy the token without the Bearer prefix">
+                <hugeicons-icon [icon]="icons.key" [size]="14" /> {{ q.name }} token only
+              </button>
+            }
           }
-        }
+        </app-dropdown>
         @if (copied()) {
           <span class="copied">Copied {{ copied() }}</span>
         }
@@ -62,8 +69,8 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
             @if (r.shortCircuitedBy) {
               <div class="muted" data-testid="short-circuit-note">Answered by the interceptor <span class="mono">{{ r.shortCircuitedBy }}</span>: this request never reached the network.</div>
             }
-            <section>
-              <h4>General</h4>
+            <details open>
+              <summary>General</summary>
               <div class="kv"><span>Request URL</span><span class="mono">{{ r.url }}</span></div>
               <div class="kv"><span>Request Method</span><span>{{ r.method }}</span></div>
               <div class="kv"><span>Status Code</span><span>{{ statusLabel(r) }} {{ r.statusText }}</span></div>
@@ -87,9 +94,9 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
                   </span>
                 </div>
               }
-            </section>
-            <section>
-              <h4>Response Headers ({{ r.responseHeaders.length }})</h4>
+            </details>
+            <details open>
+              <summary>Response Headers ({{ r.responseHeaders.length }})</summary>
               @for (h of r.responseHeaders; track $index) {
                 <div class="kv">
                   <span class="header-name">
@@ -100,9 +107,9 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
                   </span>
                   <span class="mono" [class.masked]="isMasked(h, r.id + ':res' + $index)" (click)="reveal(r.id + ':res' + $index)">{{ shown(h, r.id + ':res' + $index) }}</span></div>
               }
-            </section>
-            <section>
-              <h4>Request Headers ({{ r.enrichment ? 'browser' : 'app-level only' }})</h4>
+            </details>
+            <details open>
+              <summary>Request Headers ({{ r.enrichment ? 'browser' : 'app-level only' }})</summary>
               @for (h of requestHeaders(); track $index) {
                 <div class="kv">
                   <span class="header-name">
@@ -115,21 +122,21 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
               } @empty {
                 <div class="muted">No request headers set by the app.</div>
               }
-            </section>
+            </details>
           }
           @case ('payload') {
             @if (query().length) {
-              <section>
-                <h4>Query String Parameters</h4>
+              <details open>
+                <summary>Query String Parameters</summary>
                 @for (q of query(); track $index) {
                   <div class="kv"><span>{{ q[0] }}</span><span class="mono">{{ q[1] }}</span></div>
                 }
-              </section>
+              </details>
             }
-            <section>
-              <h4>Request Payload</h4>
+            <details open>
+              <summary>Request Payload</summary>
               <ng-container *ngTemplateOutlet="bodyView; context: { $implicit: r.requestBody }" />
-            </section>
+            </details>
           }
           @case ('response') {
             @if (responseText(); as text) {
@@ -261,11 +268,15 @@ type Tab = 'headers' | 'payload' | 'response' | 'preview' | 'timing' | 'initiato
     .tabs { display: flex; align-items: center; gap: 2px; border-bottom: 1px solid var(--border); background: var(--toolbar); padding: 0 4px; flex-wrap: wrap; }
     .tabs button { border: none; background: none; padding: 4px 8px; color: var(--fg); }
     .tabs button.active { border-bottom: 2px solid var(--accent); }
-    .spacer { flex: 1; }
+    .actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 3px 8px; border-bottom: 1px solid var(--border); background: var(--toolbar); }
+    .label { display: inline-flex; align-items: center; gap: 4px; }
     .copied { color: var(--accent); padding: 0 6px; }
     .unmasked { color: var(--muted); }
     .body { overflow: auto; padding: 6px 10px; flex: 1; }
     h4 { margin: 8px 0 4px; font-size: 12px; }
+    details { margin: 4px 0; }
+    summary { cursor: pointer; font-weight: 600; padding: 2px 0; user-select: none; }
+    details[open] > summary { margin-bottom: 2px; }
     .kv { display: grid; grid-template-columns: minmax(120px, 30%) 1fr; gap: 8px; padding: 1px 0; }
     .kv > span:first-child { color: var(--muted); }
     .kv > span:last-child { word-break: break-all; }
@@ -357,7 +368,7 @@ export class RequestDetail {
   });
   protected readonly started = computed(() => {
     const r = this.store.selectedRequest();
-    return r ? new Date(r.startTime).toLocaleTimeString(undefined, { hour12: false, fractionalSecondDigits: 3 }) : '';
+    return r ? formatTimestamp(r) : '';
   });
   /** Quick-copy Headers the selected request carries (ADR 6: raw values). */
   protected readonly quickCopies = computed(() => {

@@ -25,7 +25,7 @@ import type { TreeNode } from '@ngapi/protocol';
         <hugeicons-icon [icon]="icons.picker" [size]="14" />
       </button>
     </div>
-    <div class="tree" (mouseleave)="store.send({ type: 'highlight', id: null })">
+    <div class="tree" [class.striped]="store.stripedRows()" (mouseleave)="store.send({ type: 'highlight', id: null })">
       <div
         class="row all"
         [class.selected]="store.selectedNodeId() === null"
@@ -113,6 +113,7 @@ import type { TreeNode } from '@ngapi/protocol';
     :host { display: flex; flex-direction: column; min-height: 0; height: 100%; }
     .tree { flex: 1; overflow: auto; padding: 2px 0; min-height: 60px; }
     .row { display: flex; align-items: center; gap: 4px; padding: 1px 8px; cursor: default; white-space: nowrap; }
+    :where(.tree.striped) .row:nth-child(even) { background: var(--stripe); }
     .row:hover { background: var(--hover); }
     .row.selected { background: var(--selected); }
     .row.owner .name { text-decoration: underline; text-decoration-color: var(--accent); }

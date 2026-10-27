@@ -7,6 +7,7 @@
   --border: #d0d0d0;
   --row-border: #f0f0f0;
   --hover: #eef3fd;
+  --stripe: #f7f8fa;
   --selected: #d3e3fd;
   --accent: #1a73e8;
   --badge: #e8eaed;
@@ -30,6 +31,7 @@
   --border: #474747;
   --row-border: #2f3033;
   --hover: #2e3a4d;
+  --stripe: #26272a;
   --selected: #0e3a6b;
   --accent: #8ab4f8;
   --badge: #3c4043;
@@ -74,6 +76,20 @@ button.icon {
 hugeicons-icon {
   display: inline-flex;
   flex: none;
+}
+/* Items of an app-dropdown menu (projected, so styled here). */
+.menu > button {
+  border: none;
+  justify-content: flex-start;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.menu > button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+.menu > button:disabled:hover {
+  background: transparent;
 }
 input {
   font: inherit;

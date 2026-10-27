@@ -33,9 +33,13 @@ import {
   type TreeNode,
   type TypeChip,
   type ValueEntry,
+  type SortDirection,
   type ValueTarget,
 } from '@ngapi/protocol';
 import { inspectedEval } from './devtools';
+
+/** Request table columns that can be sorted. */
+export type SortColumn = 'name' | 'method' | 'status' | 'type' | 'component' | 'size' | 'time' | 'timestamp';
 
 /** Virtual tree selection for requests without an Owner Component. */
 export const UNATTRIBUTED = -1;
@@ -88,6 +92,10 @@ export class InspectorStore {
   readonly maskedHeaders = signal<string[]>(DEFAULT_MASKED_HEADERS);
   readonly quickCopyHeaders = signal<string[]>(DEFAULT_QUICK_COPY_HEADERS);
   readonly duplicateWindowMs = signal(DEFAULT_DUPLICATE_WINDOW_MS);
+  /** Alternating row backgrounds in the request table and the component tree (extension option). */
+  readonly stripedRows = signal(true);
+  /** Request table sort; null keeps capture order. */
+  readonly sort = signal<{ key: SortColumn; direction: SortDirection } | null>(null);
   /** Show only requests flagged with a Waste Signal. */
   readonly wasteOnly = signal(false);
   /** Skip the confirmation before replaying side-effecting requests (this session only, never saved). */

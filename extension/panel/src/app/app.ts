@@ -2,6 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FILTER_KEYS, toHar, type HarLikeEntry, type StatusChip, type TypeChip } from '@ngapi/protocol';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { ComponentTree } from './component-tree';
+import { Dropdown } from './dropdown';
 import { ICONS } from './icons';
 import { InspectorStore } from './inspector.store';
 import { MocksPane } from './mocks-pane';
@@ -14,7 +15,7 @@ import { RequestTimeline } from './request-timeline';
 
 @Component({
   selector: 'app-root',
-  imports: [ComponentTree, RequestTable, RequestTimeline, MocksPane, RequestDetail, HugeiconsIconComponent, Splitter, QuickCopyMenu, OverviewStrip],
+  imports: [ComponentTree, RequestTable, RequestTimeline, MocksPane, RequestDetail, HugeiconsIconComponent, Splitter, QuickCopyMenu, OverviewStrip, Dropdown],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -72,7 +73,8 @@ export class App implements OnInit {
   }
 
   private async loadSettings(): Promise<void> {
-    const stored = await chrome.storage?.sync.get(['maskedHeaders', 'quickCopyHeaders', 'duplicateWindowMs']);
+    const stored = await chrome.storage?.sync.get(['maskedHeaders', 'quickCopyHeaders', 'duplicateWindowMs', 'stripedRows']);
+    this.store.stripedRows.set(stored?.['stripedRows'] !== false);
     const windowMs = stored?.['duplicateWindowMs'];
     if (typeof windowMs === 'number' && windowMs >= 0) this.store.duplicateWindowMs.set(windowMs);
     const masked = stored?.['maskedHeaders'];
@@ -126,6 +128,11 @@ export class App implements OnInit {
   protected resizeDetail(main: HTMLElement, dx: number): void {
     const { main: total, tree, detail } = this.dragFrom;
     this.layout.set('detail', clamp(detail - dx, PANE_MIN.detail, total - tree - PANE_MIN.table - splitters(main)));
+  }
+
+  /** The manifest's options_page opens in its own tab. */
+  protected openSettings(): void {
+    void chrome.runtime.openOptionsPage();
   }
 
   protected exportHar(unmasked: boolean): void {

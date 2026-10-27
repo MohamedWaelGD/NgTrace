@@ -32,6 +32,31 @@ test.describe('panel', () => {
     await expect.poll(() => rowNames(panel)).toEqual(['missing', 'error']);
   });
 
+  test('column headers sort ascending, descending, then back to capture order; Timestamp shows the start time', async ({ openInspector }) => {
+    const { panel } = await loadAll(openInspector);
+    const captured = await rowNames(panel);
+    await expect(panel.getByTestId('request-row').first().locator('td.timestamp')).toHaveText(/^\d\d:\d\d:\d\d\.\d{3}$/);
+
+    await panel.getByTestId('sort-name').click();
+    await expect.poll(() => rowNames(panel)).toEqual([...captured].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })));
+    await panel.getByTestId('sort-name').click();
+    await expect.poll(() => rowNames(panel)).toEqual([...captured].sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' })));
+    await expect(panel.getByTestId('sort-name').locator('..')).toHaveAttribute('aria-sort', 'descending');
+    await panel.getByTestId('sort-name').click();
+    await expect.poll(() => rowNames(panel)).toEqual(captured);
+
+    await panel.getByTestId('sort-method').click();
+    await panel.getByTestId('sort-method').click();
+    await expect(panel.getByTestId('request-row').first()).toContainText('cart');
+  });
+
+  test('the settings button opens the options page in a tab', async ({ openInspector, context }) => {
+    const { panel } = await openInspector();
+    const opened = context.waitForEvent('page');
+    await panel.getByTestId('settings').click();
+    expect((await opened).url()).toMatch(/\/options\.html$/);
+  });
+
   test('filter autocomplete completes property keys', async ({ openInspector }) => {
     const { panel } = await openInspector();
     const filter = panel.getByTestId('filter');
@@ -83,7 +108,7 @@ test.describe('panel', () => {
     await app.click('#add-to-cart');
     await panel.getByTestId('filter').fill('method:POST');
     await expect.poll(() => rowNames(panel)).toEqual(['cart']);
-    const [download] = await Promise.all([panel.waitForEvent('download'), panel.getByTestId('export-har').click()]);
+    const [download] = await Promise.all([panel.waitForEvent('download'), panel.getByTestId('export-menu').click().then(() => panel.getByTestId('export-har').click())]);
     const har = JSON.parse(await streamText(await download.createReadStream()));
     expect(har.log.entries).toHaveLength(1);
     expect(har.log.entries[0]._angular).toMatchObject({ component: 'CartComponent', confidence: 'context' });

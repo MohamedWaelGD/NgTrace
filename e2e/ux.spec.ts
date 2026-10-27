@@ -127,6 +127,7 @@ test.describe('header copy', () => {
     await row.hover();
     await panel.getByTestId('copy-header-req-authorization').click();
     await expect(panel.locator('.copied')).toHaveText(/^Copied authorization \(unmasked\)$/i);
+    await panel.getByTestId('copy-menu').click();
     await panel.getByTestId('copy-curl').click();
     await expect.poll(copied).toHaveLength(2);
     const [header, curl] = await copied();
@@ -139,9 +140,12 @@ test.describe('header copy', () => {
     const copied = await captureClipboard(panel);
     await app.click('#add-to-cart');
     await selectRequest(panel, 'cart');
+    await panel.getByTestId('copy-menu').click();
     await panel.getByTestId('quick-copy-authorization').click();
     await expect.poll(copied).toEqual(['Bearer demo-secret-token']);
     await selectRequest(panel, 'config');
+    await panel.getByTestId('copy-menu').click();
+    await expect(panel.getByTestId('copy-curl')).toBeVisible();
     await expect(panel.getByTestId('quick-copy-authorization')).toHaveCount(0);
   });
 

@@ -23,6 +23,11 @@ export function formatDuration(r: CapturedRequest): string {
   return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(2)} s`;
 }
 
+/** Wall-clock time the request started, to the millisecond (24 h, local time). */
+export function formatTimestamp(r: CapturedRequest): string {
+  return new Date(r.startTime).toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 });
+}
+
 export function statusLabel(r: CapturedRequest): string {
   if (r.error) return '(failed)';
   if (r.status === null) return '(pending)';

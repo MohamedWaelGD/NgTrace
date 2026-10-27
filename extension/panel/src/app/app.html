@@ -27,8 +27,12 @@
   <span class="spacer"></span>
   <span class="info">{{ devInfo() }}</span>
   <app-quick-copy-menu />
-  <button (click)="exportHar(false)" title="Export visible requests as HAR (masked)" data-testid="export-har"><hugeicons-icon [icon]="icons.exportHar" [size]="14" /> Export HAR</button>
-  <button (click)="exportHar(true)" title="Export visible requests as HAR without masking"><hugeicons-icon [icon]="icons.unmasked" [size]="14" /> Export unmasked</button>
+  <app-dropdown title="Export the visible requests" testid="export-menu" align="right">
+    <span label class="label"><hugeicons-icon [icon]="icons.exportHar" [size]="14" /> Export</span>
+    <button (click)="exportHar(false)" title="Export visible requests as HAR (masked)" data-testid="export-har"><hugeicons-icon [icon]="icons.exportHar" [size]="14" /> HAR (masked)</button>
+    <button (click)="exportHar(true)" title="Export visible requests as HAR without masking" data-testid="export-har-unmasked"><hugeicons-icon [icon]="icons.unmasked" [size]="14" /> HAR (unmasked)</button>
+  </app-dropdown>
+  <button class="icon" (click)="openSettings()" title="Open settings in a tab" aria-label="Settings" data-testid="settings"><hugeicons-icon [icon]="icons.settings" [size]="16" /></button>
 </header>
 
 <div class="filterbar">
