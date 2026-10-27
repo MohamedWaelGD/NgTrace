@@ -1,0 +1,95 @@
+<!doctype html>
+<!-- GitHub social preview, 1280×640. node marketing/social.mjs renders it to marketing/out/social-preview.png. -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>NgTrace social preview</title>
+<style>
+  :root {
+    --crimson: #d90a45;
+    --magenta: #c21aa8;
+    --ink: #160f22;
+    --plum: #241433;
+    --pink: #f3a6d6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1280px;
+    height: 640px;
+    overflow: hidden;
+    background: var(--ink);
+    font-family: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+    color: #fff;
+    -webkit-font-smoothing: antialiased;
+  }
+  .stage { position: relative; width: 1280px; height: 640px; overflow: hidden; background: linear-gradient(160deg, #1b1128 0%, var(--plum) 60%, #2a1036 100%); }
+  .glow { position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none; }
+  .glow.a { width: 560px; height: 560px; left: -220px; top: -260px; background: var(--crimson); opacity: 0.5; }
+  .glow.b { width: 640px; height: 640px; right: -240px; bottom: -320px; background: var(--magenta); opacity: 0.38; }
+  .grid {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0.06;
+    background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse at 20% 30%, #000 0%, transparent 70%);
+  }
+
+  .copy { position: absolute; left: 72px; top: 0; bottom: 0; width: 520px; display: flex; flex-direction: column; justify-content: center; }
+  .logo { display: flex; align-items: center; gap: 18px; }
+  .logo img { width: 88px; height: 88px; filter: drop-shadow(0 12px 36px rgba(217, 10, 69, 0.5)); }
+  .logo span { font-size: 76px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+  h1 { margin-top: 30px; font-size: 38px; line-height: 1.15; font-weight: 700; letter-spacing: -0.015em; }
+  h1 em { font-style: normal; background: linear-gradient(90deg, #ff3d7a, #e04bd0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { margin-top: 14px; font-size: 20px; line-height: 1.4; color: rgba(255, 255, 255, 0.68); }
+  .chips { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips span { font-size: 15px; padding: 5px 13px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.13); color: rgba(255, 255, 255, 0.86); }
+
+  .window {
+    position: absolute; left: 640px; top: 96px; width: 820px; height: 600px;
+    border-radius: 12px 0 0 0; overflow: hidden; background: #202124;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  }
+  .bar { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: #2b2b30; border-bottom: 1px solid #3a3a40; }
+  .bar i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  .bar i:nth-child(1) { background: #ff5f57; } .bar i:nth-child(2) { background: #febc2e; } .bar i:nth-child(3) { background: #28c840; }
+  .tabs { display: flex; gap: 2px; margin-left: 18px; font-size: 12px; color: #9aa0a6; }
+  .tabs span { padding: 6px 12px; border-radius: 6px 6px 0 0; }
+  .tabs span.on { color: #e8eaed; background: #202124; box-shadow: inset 0 2px 0 var(--crimson); }
+  .shot { position: relative; }
+  .shot img { display: block; width: 1080px; }
+  /* The selected component and the request it made, in the 0.75-scaled capture. */
+  .spot {
+    position: absolute; border-radius: 5px; pointer-events: none;
+    box-shadow: 0 0 0 2px #ff4f8b, 0 0 28px 4px rgba(255, 60, 140, 0.45);
+  }
+  .spot.component { left: 22px; top: 131px; width: 158px; height: 15px; }
+  .spot.request { left: 185px; top: 95px; width: 368px; height: 15px; }
+  .fade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, transparent 55%, rgba(22, 15, 34, 0.85) 100%); }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="glow a"></div>
+    <div class="glow b"></div>
+    <div class="grid"></div>
+
+    <div class="copy">
+      <div class="logo"><img src="../store/logo-1024.png" alt="" /><span>NgTrace</span></div>
+      <h1>See which <em>component</em> made every API request</h1>
+      <p class="sub">A DevTools panel for Angular: payloads, interceptors, retries and component state, side by side.</p>
+      <div class="chips"><span>Angular 14+</span><span>zone.js &amp; zoneless</span><span>Signals</span><span>Open source</span></div>
+    </div>
+
+    <div class="window">
+      <div class="bar"><i></i><i></i><i></i>
+        <div class="tabs"><span>Elements</span><span>Console</span><span>Network</span><span class="on">NgTrace</span></div>
+      </div>
+      <div class="shot">
+        <img src="raw/components.png" alt="" />
+        <div class="spot component"></div>
+        <div class="spot request"></div>
+      </div>
+      <div class="fade"></div>
+    </div>
+  </div>
+</body>
+</html>

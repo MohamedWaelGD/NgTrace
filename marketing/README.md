@@ -28,3 +28,4 @@ Scene copy, order and zoom regions are in `video/src/scenes.ts` (rects in the ca
 | `out/screenshots/NN-scene@2x.png` | 2560×1600 for the README, site, social posts |
 | `video/out/ngtrace-trailer.mp4` | 30 s, 1920×1080, H.264, 18 MB |
 | `video/out/ngtrace-trailer-720p.mp4` | 30 s, 1280×720, 3 MB, fits GitHub's 10 MB upload limit |
+| `out/social-preview.png` | 1280×640 GitHub social preview, from `social-preview.html` (`node marketing/social.mjs`) |
