@@ -24,6 +24,8 @@ The five Chrome Web Store screenshots and the ~35 s promo share one set of scene
 
 ```bash
 for i in 1 2 3 4 5; do npx remotion still src/index.tsx Shot$i out/shots/0$i.png --frame=-1; done
+npx remotion still src/index.tsx SmallTile ../../store/promo-small-440x280.png --frame=-1
+npx remotion still src/index.tsx MarqueeTile ../../store/promo-marquee-1400x560.png --frame=-1
 node scripts/sounds.mjs   # synthesizes the sound design into public/sfx (once)
 npx remotion render src/index.tsx Promo out/ngtrace-promo.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --audio-codec=aac --audio-bitrate=192k
 npx remotion render src/index.tsx Promo out/ngtrace-promo-540p.mp4 --scale=0.5 --codec=h264 --crf=20 --pixel-format=yuv420p --audio-codec=aac --audio-bitrate=128k
@@ -46,6 +48,7 @@ Scene copy, order and zoom regions are in `video/src/scenes.ts` (rects in the ca
 | `video/out/ngtrace-trailer.mp4` | 30 s, 1920×1080, H.264, 18 MB |
 | `video/out/ngtrace-trailer-720p.mp4` | 30 s, 1280×720, 3 MB, fits GitHub's 10 MB upload limit |
 | `video/out/shots/0N.png` | 1280×800 sticker-style store screenshots |
+| `../store/promo-small-440x280.png`, `../store/promo-marquee-1400x560.png` | Store promo tiles, from `video/src/tiles.tsx` |
 | `video/out/ngtrace-promo.mp4` | 35 s, 1920×1080, H.264 + AAC, 10 MB |
 | `video/out/ngtrace-promo-540p.mp4` | 35 s, 960×540, 3.7 MB |
 | `out/social-preview.png` | 1280×640 GitHub social preview, from `social-preview.html` (`node marketing/social.mjs`) |

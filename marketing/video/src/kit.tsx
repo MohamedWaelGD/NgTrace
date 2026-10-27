@@ -423,3 +423,23 @@ export function Circle({
     </>
   );
 }
+
+/** The red logo on a white app-icon tile, so it stands out on the red background. */
+export function LogoTile({ size, style }: { size: number; style?: CSSProperties }) {
+  return (
+    <div
+      style={{
+        ...style,
+        width: size,
+        height: size,
+        borderRadius: size * 0.24,
+        background: '#fff',
+        display: 'grid',
+        placeItems: 'center',
+        boxShadow: '0 22px 44px rgba(40, 0, 25, 0.4)',
+      }}
+    >
+      <Img src={staticFile('logo.png')} style={{ width: size * 0.78, height: size * 0.78 }} />
+    </div>
+  );
+}

@@ -10,33 +10,13 @@ import { clockWipe } from '@remotion/transitions/clock-wipe';
 import { fade } from '@remotion/transitions/fade';
 import { slide } from '@remotion/transitions/slide';
 import { wipe } from '@remotion/transitions/wipe';
-import { Fragment, type CSSProperties, type ReactNode } from 'react';
-import { Img, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
-import { Backdrop, Callout, Cut, Headline, HIGHLIGHT, INK, Sfx, Stage, useEnter } from './kit';
+import { Fragment, type ReactNode } from 'react';
+import { interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
+import { Backdrop, Callout, Cut, Headline, HIGHLIGHT, INK, LogoTile, Sfx, Stage, useEnter } from './kit';
 import { SHOTS, ShotScene } from './shots';
 
 export const PROMO_FPS = 30;
 const T = 15;
-
-/** The red logo on a white app-icon tile, so it stands out on the red background. */
-function LogoTile({ size, style }: { size: number; style?: CSSProperties }) {
-  return (
-    <div
-      style={{
-        ...style,
-        width: size,
-        height: size,
-        borderRadius: size * 0.24,
-        background: '#fff',
-        display: 'grid',
-        placeItems: 'center',
-        boxShadow: '0 22px 44px rgba(40, 0, 25, 0.4)',
-      }}
-    >
-      <Img src={staticFile('logo.png')} style={{ width: size * 0.78, height: size * 0.78 }} />
-    </div>
-  );
-}
 
 function Intro() {
   const logo = useEnter(4, 12);
