@@ -26,10 +26,3 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
   if (message.channel !== 'hook' || tabId === undefined || sender.frameId !== 0) return;
   panels.get(tabId)?.postMessage(message.message);
 });
-
-/** The manifest now injects on every http(s) page; drop scripts an older version registered per origin, or they would inject twice. */
-chrome.runtime.onInstalled.addListener(async () => {
-  const existing = await chrome.scripting.getRegisteredContentScripts();
-  if (existing.length) await chrome.scripting.unregisterContentScripts({ ids: existing.map((s) => s.id) });
-  await chrome.storage.sync.remove('extraOrigins');
-});
