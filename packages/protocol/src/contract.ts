@@ -169,12 +169,12 @@ function parseResponse(r: CapturedRequest): Parsed {
   return result;
 }
 
-/** The Contract of one Endpoint from the buffered requests: only 2xx responses count, and only parseable, complete JSON bodies feed the shape. */
+/** The Contract of one Endpoint from the buffered requests: only real 2xx responses count (a Mock Rule's canned answer is not the server's contract), and only parseable, complete JSON bodies feed the shape. */
 export function buildContract(requests: CapturedRequest[], endpoint: string): Contract {
   const contract: Contract = { endpoint, shape: null, used: [], skipped: [], drift: [] };
   const perRequest: { id: string; paths: Map<string, Set<string>> }[] = [];
   for (const r of requests) {
-    if (endpointOf(r) !== endpoint || r.status === null || r.status < 200 || r.status > 299) continue;
+    if (r.mocked || endpointOf(r) !== endpoint || r.status === null || r.status < 200 || r.status > 299) continue;
     const result = parseResponse(r);
     if ('skip' in result) {
       contract.skipped.push({ id: r.id, reason: result.skip });

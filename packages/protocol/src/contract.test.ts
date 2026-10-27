@@ -110,6 +110,14 @@ describe('buildContract', () => {
     expect(c.drift).toEqual([]);
   });
 
+  it('ignores responses answered by a Mock Rule, so a canned body causes no Drift', () => {
+    const c = buildContract([res('real', { price: 9 }), res('fake', { price: 'free' }, { mocked: true })], E);
+    expect(c.used).toEqual(['real']);
+    expect(c.skipped).toEqual([]);
+    expect(c.drift).toEqual([]);
+    expect(buildContract([res('fake', { a: 1 }, { mocked: true })], E).shape).toBeNull();
+  });
+
   it('has no shape when nothing could be inferred', () => {
     const c = buildContract([res('a', null, { responseBody: { kind: 'none' } })], E);
     expect(c.shape).toBeNull();

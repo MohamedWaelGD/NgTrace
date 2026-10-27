@@ -12,3 +12,5 @@ Unit tests: type change, optional field, nullable field, empty array not Drift, 
 ## Comments
 
 2026-10-27: Implemented (packages/protocol/src/contract.ts, panel request-contract.ts, demo-app contract component, e2e/contract.spec.ts).
+
+2026-10-27: Responses answered by a Mock Rule are ignored, since a canned body would cause false Drift.
